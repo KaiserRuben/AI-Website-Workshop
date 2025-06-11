@@ -252,7 +252,7 @@ SECRET_KEY=your-secret-key
 
 ## 📄 Lizenz
 
-Dieses Projekt steht unter der MIT Lizenz. Siehe `LICENSE` Datei für Details.
+@Copyright Ruben Kaiser
 
 ## 🆘 Support
 
