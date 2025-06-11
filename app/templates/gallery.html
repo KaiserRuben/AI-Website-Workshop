@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}Galerie - SkillSpace{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="galleryApp()" x-init="init()">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="h-16 flex items-center justify-between">
+                <!-- Left: Back to Workshop -->
+                <a href="/workshop" 
+                   class="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span class="font-medium">Zurück zum Studio</span>
+                </a>
+                
+                <!-- Center: Title -->
+                <h1 class="text-xl font-bold text-gray-900">🎨 Kreativ-Galerie</h1>
+                
+                <!-- Right: Filters -->
+                <div class="flex items-center space-x-4">
+                    <select x-model="sortBy" 
+                            class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                        <option value="newest">Neueste zuerst</option>
+                        <option value="popular">Beliebteste</option>
+                        <option value="random">Zufällig</option>
+                    </select>
+                    
+                    <!-- WebSocket Status -->
+                    <div class="flex items-center space-x-2 text-sm">
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 rounded-full" 
+                                 :class="wsConnected ? 'bg-green-500' : 'bg-red-500'"></div>
+                            <span class="text-gray-600" x-text="wsConnected ? 'Live' : 'Offline'"></span>
+                        </div>
+                    </div>
+                    
+                    <button @click="refreshGallery"
+                            class="p-2 text-gray-500 hover:text-purple-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-br from-purple-50 to-cyan-50 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl font-bold text-gradient mb-4">Lass dich inspirieren!</h2>
+            <p class="text-xl text-gray-600 mb-8">Entdecke, was andere Kreativ-Helden gebaut haben</p>
+            
+            <!-- Stats -->
+            <div class="flex justify-center space-x-8">
+                <div class="text-center">
+                    <p class="text-3xl font-bold text-purple-600" x-text="stats.totalProjects"></p>
+                    <p class="text-sm text-gray-600">Projekte</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-3xl font-bold text-cyan-600" x-text="stats.activeCreators"></p>
+                    <p class="text-sm text-gray-600">Kreative</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-3xl font-bold text-lime-600" x-text="stats.totalLikes"></p>
+                    <p class="text-sm text-gray-600">Likes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gallery Grid -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Loading State -->
+        <div x-show="loading" class="text-center py-12">
+            <div class="inline-flex items-center space-x-3">
+                <svg class="animate-spin h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-lg text-gray-600">Lade kreative Meisterwerke...</span>
+            </div>
+        </div>
+        
+        <!-- Project Grid -->
+        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <template x-for="project in sortedProjects" :key="project.id">
+                <div class="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                    <!-- Preview -->
+                    <div class="aspect-video bg-gray-100 overflow-hidden cursor-pointer"
+                         @click="viewProject(project)">
+                        <iframe 
+                            class="w-full h-full transform scale-50 origin-top-left pointer-events-none"
+                            style="width: 200%; height: 200%"
+                            :srcdoc="getProjectPreview(project)">
+                        </iframe>
+                        
+                        <!-- Hover Overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-4">
+                            <button @click.stop="viewProject(project)" 
+                                    class="px-4 py-2 bg-white/90 backdrop-blur text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors">
+                                Ansehen
+                            </button>
+                            <button @click.stop="openProjectFullscreen(project)"
+                                    class="px-3 py-2 bg-purple-600/90 backdrop-blur text-white rounded-lg font-medium text-sm hover:bg-purple-600 transition-colors flex items-center space-x-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                <span>Fullscreen</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Info -->
+                    <div class="p-4">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <h3 class="font-semibold text-gray-900" x-text="project.name || 'Unbenanntes Projekt'"></h3>
+                                <p class="text-sm text-gray-600">
+                                    von <span class="font-medium text-purple-600" x-text="project.username"></span>
+                                </p>
+                            </div>
+                            <button @click.stop="toggleLike(project)"
+                                    class="p-2 rounded-full transition-all duration-300"
+                                    :class="project.liked ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-400 hover:text-red-500'">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-500">
+                            <span x-text="formatTime(project.updated_at)"></span>
+                            <span class="flex items-center space-x-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span x-text="project.likes || 0"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Empty State -->
+        <div x-show="!loading && projects.length === 0" class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Noch keine Projekte</h3>
+            <p class="text-gray-600">Sei der Erste, der etwas Kreatives baut!</p>
+        </div>
+    </div>
+    
+    <!-- Project Modal -->
+    <div x-show="selectedProject" x-transition
+         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+         @click.self="selectedProject = null">
+        <div class="bg-white rounded-xl max-w-6xl w-full h-[80vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-200 flex-shrink-0">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900" x-text="selectedProject?.name || 'Projekt'"></h3>
+                    <p class="text-sm text-gray-600">
+                        von <span class="font-medium text-purple-600" x-text="selectedProject?.username"></span>
+                    </p>
+                </div>
+                <button @click="selectedProject = null"
+                        class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <!-- Preview Section - Takes available space -->
+                <div class="flex-1 bg-gray-100 overflow-hidden">
+                    <iframe 
+                        class="w-full h-full"
+                        :srcdoc="getProjectPreview(selectedProject)"
+                        sandbox="allow-scripts allow-same-origin">
+                    </iframe>
+                </div>
+                
+                <!-- Actions Section - Fixed at bottom -->
+                <div class="flex-shrink-0 p-6 bg-white border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                        <button @click="toggleLike(selectedProject)"
+                                class="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
+                                :class="selectedProject?.liked 
+                                        ? 'bg-red-100 text-red-600' 
+                                        : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-600'">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span x-text="selectedProject?.liked ? 'Gefällt mir' : 'Gefällt mir'"></span>
+                            <span class="font-semibold" x-text="selectedProject?.likes || 0"></span>
+                        </button>
+                        
+                        <button @click="openProjectFullscreen(selectedProject)"
+                                class="flex items-center space-x-2 px-4 py-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                            <span>Fullscreen öffnen</span>
+                        </button>
+                        
+                        <button @click="cloneProject(selectedProject)"
+                                class="flex items-center space-x-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+                            </svg>
+                            <span>Als Vorlage nutzen</span>
+                        </button>
+                        </div>
+                        
+                        <span class="text-sm text-gray-500" x-text="`Erstellt ${formatTime(selectedProject?.updated_at)}`"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function galleryApp() {
+    return {
+        projects: [],
+        sortBy: 'newest',
+        loading: true,
+        selectedProject: null,
+        stats: {
+            totalProjects: 0,
+            activeCreators: 0,
+            totalLikes: 0
+        },
+        ws: null,
+        wsConnected: false,
+        
+        get sortedProjects() {
+            const sorted = [...this.projects];
+            
+            switch (this.sortBy) {
+                case 'popular':
+                    return sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+                case 'random':
+                    return sorted.sort(() => Math.random() - 0.5);
+                default: // newest
+                    return sorted.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            }
+        },
+        
+        async init() {
+            await this.loadProjects();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                this.loadProjects();
+            }, 30000);
+            
+            // WebSocket for real-time updates
+            this.initWebSocket();
+        },
+        
+        async loadProjects() {
+            try {
+                const response = await fetch('/api/gallery');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.projects = data.projects || [];
+                    this.stats = data.stats || this.stats;
+                }
+            } catch (error) {
+                console.error('Failed to load gallery:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async initWebSocket() {
+            // Get session token from API (HTTP-only cookies can't be accessed via JS)
+            const sessionToken = await this.getSessionToken();
+            if (!sessionToken) {
+                console.warn('No session token found for WebSocket connection');
+                return;
+            }
+
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/${sessionToken}`;
+                
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    console.log('Gallery WebSocket connected');
+                    this.wsConnected = true;
+                };
+                
+                this.ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+                
+                this.ws.onclose = () => {
+                    console.log('Gallery WebSocket disconnected');
+                    this.wsConnected = false;
+                    // Reconnect after 5 seconds
+                    setTimeout(() => this.initWebSocket(), 5000);
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('Gallery WebSocket error:', error);
+                };
+                
+            } catch (error) {
+                console.error('Failed to initialize WebSocket:', error);
+            }
+        },
+
+        async getSessionToken() {
+            try {
+                // Get session token from API (HTTP-only cookies are handled server-side)
+                const response = await fetch('/api/workshop/session');
+                if (!response.ok) {
+                    console.error('Failed to get session info:', response.status);
+                    return null;
+                }
+                const sessionData = await response.json();
+                return sessionData.session_token;
+            } catch (error) {
+                console.error('Error fetching session token:', error);
+                return null;
+            }
+        },
+
+        handleWebSocketMessage(message) {
+            switch (message.type) {
+                case 'gallery_batch_update':
+                    this.processUpdates(message.updates);
+                    break;
+                    
+                case 'like_update':
+                    // Update local state with server response
+                    const likedProject = this.projects.find(p => p.id === message.website_id);
+                    if (likedProject) {
+                        likedProject.liked = message.liked;
+                        likedProject.likes = message.likes_count;
+                    }
+                    break;
+                    
+                case 'gallery_like_update':
+                    // Update like count when another user likes/unlikes
+                    const project = this.projects.find(p => p.id === message.website_id);
+                    if (project) {
+                        project.likes = message.likes_count;
+                    }
+                    break;
+                    
+                case 'connection_status':
+                    console.log('Gallery WebSocket connection status:', message);
+                    break;
+                    
+                default:
+                    // Ignore other message types in gallery
+                    break;
+            }
+        },
+
+        processUpdates(updates) {
+            if (!updates || typeof updates !== 'object') return;
+            
+            let updatedCount = 0;
+            
+            Object.entries(updates).forEach(([userId, preview]) => {
+                const userIdNum = parseInt(userId);
+                
+                // Find existing project by user_id
+                const existingIndex = this.projects.findIndex(p => p.user_id === userIdNum);
+                
+                if (existingIndex >= 0) {
+                    // Update existing project
+                    this.projects[existingIndex] = {
+                        ...this.projects[existingIndex],
+                        html: preview.html,
+                        css: preview.css || this.projects[existingIndex].css,
+                        js: preview.js || this.projects[existingIndex].js,
+                        name: preview.name || this.projects[existingIndex].name,
+                        updated_at: preview.updated_at || new Date().toISOString()
+                    };
+                    updatedCount++;
+                } else {
+                    // Add new project if it doesn't exist
+                    this.projects.push({
+                        id: userIdNum,
+                        user_id: userIdNum,
+                        html: preview.html,
+                        css: preview.css || '',
+                        js: preview.js || '',
+                        name: preview.name || 'Unbenanntes Projekt',
+                        username: preview.username || 'Unbekannt',
+                        updated_at: preview.updated_at || new Date().toISOString(),
+                        likes: 0,
+                        liked: false
+                    });
+                    updatedCount++;
+                }
+            });
+            
+            // Update stats
+            this.stats.totalProjects = this.projects.length;
+            this.stats.activeCreators = new Set(this.projects.map(p => p.user_id)).size;
+            
+            console.log(`Gallery: ${updatedCount} projects updated via WebSocket`);
+        },
+        
+        getProjectPreview(project) {
+            if (!project) return '';
+            
+            return `
+                <!DOCTYPE html>
+                <html lang="de">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>${project.name || 'Projekt'} - ${project.username || ''}</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"><\/script>
+                    <style>${project.css || ''}</style>
+                </head>
+                <body>
+                    ${project.html || '<p>Leeres Projekt</p>'}
+                    <script>${project.js || ''}<\/script>
+                </body>
+                </html>
+            `;
+        },
+
+        openProjectFullscreen(project) {
+            // Create a complete HTML document with all dependencies
+            const fullHTML = this.getProjectPreview(project);
+            
+            // Open in new tab/window
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+                newWindow.document.write(fullHTML);
+                newWindow.document.close();
+                newWindow.document.title = `${project.name || 'Projekt'} - ${project.username}`;
+                
+                // Close modal if it's open (smart UX)
+                if (this.selectedProject) {
+                    this.selectedProject = null;
+                }
+            }
+        },
+        
+        viewProject(project) {
+            this.selectedProject = project;
+        },
+        
+        async toggleLike(project) {
+            // Optimistic update
+            project.liked = !project.liked;
+            project.likes = (project.likes || 0) + (project.liked ? 1 : -1);
+            
+            // Send via WebSocket if connected
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'toggle_like',
+                    website_id: project.id
+                }));
+            } else {
+                // Fallback to API if WebSocket not available
+                try {
+                    await fetch(`/api/gallery/${project.id}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ liked: project.liked })
+                    });
+                } catch (error) {
+                    // Revert on error
+                    project.liked = !project.liked;
+                    project.likes = (project.likes || 0) + (project.liked ? 1 : -1);
+                    console.error('Failed to update like:', error);
+                }
+            }
+        },
+        
+        async cloneProject(project) {
+            if (confirm(`Möchtest du "${project.name}" als Vorlage für dein Projekt nutzen?`)) {
+                try {
+                    const response = await fetch('/api/clone-template', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            source_user_id: project.user_id
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        // Template cloned successfully, redirect to workshop
+                        window.location.href = '/workshop';
+                    } else {
+                        const error = await response.json();
+                        alert(`Fehler beim Übernehmen der Vorlage: ${error.detail || 'Unbekannter Fehler'}`);
+                    }
+                } catch (error) {
+                    console.error('Failed to clone template:', error);
+                    alert('Fehler beim Übernehmen der Vorlage. Bitte versuche es erneut.');
+                }
+            }
+        },
+        
+        refreshGallery() {
+            this.loading = true;
+            this.loadProjects();
+        },
+        
+        formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            
+            if (minutes < 1) return 'gerade eben';
+            if (minutes < 60) return `vor ${minutes} Min`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `vor ${hours} Std`;
+            
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
+            
+            return date.toLocaleDateString('de-DE');
+        }
+    }
+}
+</script>
+{% endblock %}

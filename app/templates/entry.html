@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Willkommen - SkillSpace{% endblock %}
+
+{% block extra_head %}
+<!-- Force load Tailwind from CDN since local file is missing -->
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* Ensure modal can be closed */
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+    <!-- Background decoration -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 rounded-full gradient-purple-cyan opacity-20 blur-3xl"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 rounded-full gradient-purple-lime opacity-20 blur-3xl"></div>
+    </div>
+
+    <div class="relative z-10 w-full max-w-md mx-auto px-6" x-data="entryApp()" x-init="init()">
+        <!-- Logo and Title -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center space-x-3 mb-6">
+                <div class="w-12 h-12 rounded-lg gradient-purple-cyan flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-bold text-gradient">SkillSpace</h1>
+            </div>
+            <p class="text-xl text-gray-600 mb-2">Deine Idee. Deine Website. Dein Tag mit KI.</p>
+            <p class="text-sm text-gray-500">Von null auf Website in einem Tag</p>
+        </div>
+
+        <!-- Entry Form -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 relative overflow-hidden">
+            <!-- Decorative element -->
+            <div class="absolute top-0 right-0 w-32 h-32 gradient-purple-lime opacity-10 rounded-bl-full"></div>
+
+            <!-- Mode Toggle -->
+            <div class="relative z-10 mb-6">
+                <div class="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                        type="button"
+                        @click="mode = 'signup'"
+                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all"
+                        :class="mode === 'signup' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                    >
+                        Neu registrieren
+                    </button>
+                    <button
+                        type="button"
+                        @click="mode = 'login'"
+                        class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all"
+                        :class="mode === 'login' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+                    >
+                        Anmelden
+                    </button>
+                </div>
+            </div>
+
+            <form @submit.prevent="submitForm" class="relative z-10">
+                <div class="space-y-6">
+                    <div>
+                        <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span x-show="mode === 'signup'">Wähle deinen Benutzernamen</span>
+                            <span x-show="mode === 'login'">Benutzername</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="username"
+                            x-model="username"
+                            @input="handleUsernameInput"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                            :class="{
+                                'border-red-500': usernameError,
+                                'border-green-500': (mode === 'signup' && usernameValid && username.length > 0) || (mode === 'login' && username.length > 0)
+                            }"
+                            placeholder="z.B. MaxMustermann"
+                            autofocus
+                            required
+                        >
+
+                        <!-- Username feedback for signup only -->
+                        <div class="mt-2 text-sm" x-show="mode === 'signup' && username.length > 0">
+                            <p x-show="usernameError" class="text-red-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span x-text="usernameError"></span>
+                            </p>
+                            <p x-show="usernameValid" class="text-green-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                Benutzername verfügbar!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <span x-show="mode === 'signup'">Erstelle ein Passwort</span>
+                            <span x-show="mode === 'login'">Passwort</span>
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            x-model="password"
+                            @input="validatePassword"
+                            class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                            :class="{
+                                'border-red-500': passwordError,
+                                'border-green-500': (mode === 'signup' && passwordValid && password.length > 0) || (mode === 'login' && password.length > 0)
+                            }"
+                            :placeholder="mode === 'signup' ? 'Mindestens 6 Zeichen' : 'Dein Passwort'"
+                            required
+                        >
+
+                        <!-- Password feedback for signup only -->
+                        <div class="mt-2 text-sm" x-show="mode === 'signup' && password.length > 0">
+                            <p x-show="passwordError" class="text-red-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span x-text="passwordError"></span>
+                            </p>
+                            <p x-show="passwordValid" class="text-green-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                Passwort sicher!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="submit"
+                            :disabled="!canSubmit || loading"
+                            class="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-300 transform hover:scale-105"
+                            :class="canSubmit && !loading ? 'gradient-purple-lime glow-lime hover:glow-purple' : 'bg-gray-300 cursor-not-allowed'"
+                        >
+                            <span x-show="!loading">
+                                <span x-show="mode === 'signup'">Registrieren</span>
+                                <span x-show="mode === 'login'">Anmelden</span>
+                            </span>
+                            <span x-show="loading" class="flex items-center justify-center">
+                                <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Wird geladen...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="mt-12 grid grid-cols-3 gap-4 text-center">
+            <div class="bg-white/80 backdrop-blur rounded-lg p-4">
+                <div class="text-2xl mb-2">🚀</div>
+                <p class="text-sm font-semibold text-gray-700">Sofort starten</p>
+                <p class="text-xs text-gray-500">Keine Installation</p>
+            </div>
+            <div class="bg-white/80 backdrop-blur rounded-lg p-4">
+                <div class="text-2xl mb-2">🤖</div>
+                <p class="text-sm font-semibold text-gray-700">KI-Power</p>
+                <p class="text-xs text-gray-500">GPT-4 hilft dir</p>
+            </div>
+            <div class="bg-white/80 backdrop-blur rounded-lg p-4">
+                <div class="text-2xl mb-2">🎨</div>
+                <p class="text-sm font-semibold text-gray-700">Kreativ sein</p>
+                <p class="text-xs text-gray-500">Ohne Grenzen</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal - Fixed version -->
+    <div x-show="showError"
+         x-transition
+         @click.self="closeError()"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 class="text-lg font-semibold text-red-600 mb-2">Oops!</h3>
+            <p class="text-gray-600 mb-4" x-text="errorMessage || 'Ein Fehler ist aufgetreten'"></p>
+            <button @click="closeError()"
+                    type="button"
+                    class="w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">
+                Verstanden
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function entryApp() {
+    return {
+        mode: 'signup', // 'signup' or 'login'
+        username: '',
+        password: '',
+        usernameValid: false,
+        passwordValid: false,
+        usernameError: '',
+        passwordError: '',
+        loading: false,
+        showError: false,
+        errorMessage: '',
+
+        checkTimeout: null,
+
+        init() {
+            console.log('Entry app initialized');
+            // Reset any stuck state
+            this.showError = false;
+            this.loading = false;
+
+            // Check if already logged in
+            this.checkExistingSession();
+        },
+
+        get canSubmit() {
+            if (this.mode === 'signup') {
+                return this.usernameValid && this.passwordValid;
+            } else {
+                return this.username.length > 0 && this.password.length > 0;
+            }
+        },
+
+        closeError() {
+            console.log('Closing error dialog');
+            this.showError = false;
+            this.errorMessage = '';
+        },
+
+        async checkExistingSession() {
+            try {
+                const response = await fetch('/api/workshop/session');
+                if (response.ok) {
+                    window.location.href = '/workshop';
+                }
+            } catch (error) {
+                // Not logged in, continue normally
+                console.log('Not logged in, showing entry form');
+            }
+        },
+
+        handleUsernameInput() {
+            if (this.mode === 'signup') {
+                this.checkUsername();
+            } else {
+                // For login, just reset any previous errors
+                this.usernameError = '';
+            }
+        },
+
+        checkUsername() {
+            clearTimeout(this.checkTimeout);
+            this.usernameError = '';
+            this.usernameValid = false;
+
+            // Basic validation
+            if (this.username.length < 3) {
+                this.usernameError = 'Mindestens 3 Zeichen erforderlich';
+                return;
+            }
+
+            if (this.username.length > 20) {
+                this.usernameError = 'Maximal 20 Zeichen erlaubt';
+                return;
+            }
+
+            if (!/^[a-zA-Z0-9_-]+$/.test(this.username)) {
+                this.usernameError = 'Nur Buchstaben, Zahlen, _ und - erlaubt';
+                return;
+            }
+
+            // Debounced availability check
+            this.checkTimeout = setTimeout(() => {
+                this.checkAvailability();
+            }, 500);
+        },
+
+        async checkAvailability() {
+            try {
+                const response = await fetch(`/api/check-username?username=${encodeURIComponent(this.username)}`);
+                if (!response.ok) {
+                    throw new Error('Server error');
+                }
+                const data = await response.json();
+
+                if (data.available) {
+                    this.usernameValid = true;
+                    this.usernameError = '';
+                } else {
+                    this.usernameValid = false;
+                    this.usernameError = 'Dieser Name ist bereits vergeben';
+                }
+            } catch (error) {
+                console.error('Username check failed:', error);
+                // On error, assume available
+                this.usernameValid = true;
+            }
+        },
+
+        validatePassword() {
+            this.passwordError = '';
+            this.passwordValid = false;
+
+            if (this.mode === 'signup') {
+                if (this.password.length < 6) {
+                    this.passwordError = 'Mindestens 6 Zeichen erforderlich';
+                    return;
+                }
+
+                if (this.password.length > 128) {
+                    this.passwordError = 'Maximal 128 Zeichen erlaubt';
+                    return;
+                }
+
+                this.passwordValid = true;
+            } else {
+                // For login, any password is valid (will be verified server-side)
+                this.passwordValid = this.password.length > 0;
+            }
+        },
+
+        async submitForm() {
+            if (!this.canSubmit || this.loading) return;
+
+            this.loading = true;
+
+            try {
+                const endpoint = this.mode === 'signup' ? '/api/signup' : '/api/login';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: this.username,
+                        password: this.password
+                    })
+                });
+
+                if (response.ok) {
+                    // Success animation before redirect
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    window.location.href = '/workshop';
+                } else {
+                    let errorMsg = this.mode === 'signup' ? 'Fehler beim Registrieren' : 'Fehler beim Anmelden';
+                    try {
+                        const data = await response.json();
+                        errorMsg = data.detail || errorMsg;
+                    } catch (e) {
+                        // JSON parse error
+                    }
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                this.loading = false;
+                this.errorMessage = error.message || 'Ein unerwarteter Fehler ist aufgetreten';
+                this.showError = true;
+            }
+        }
+    }
+}
+
+// Force close error on page load if stuck
+document.addEventListener('DOMContentLoaded', () => {
+    // Emergency close any stuck modals
+    const errorModal = document.querySelector('[x-show="showError"]');
+    if (errorModal) {
+        errorModal.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

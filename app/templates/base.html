@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SkillSpace - Deine Idee. Deine Website. Dein Tag mit KI.{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        /* SkillSpace Custom Properties */
+        :root {
+            --electric-purple: #7C3AED;
+            --deep-space: #1E293B;
+            --neon-lime: #84CC16;
+            --cyan-glow: #06B6D4;
+            --light-gray: #F8FAFC;
+            --medium-gray: #64748B;
+            --charcoal: #334155;
+        }
+
+        /* Custom gradient backgrounds */
+        .gradient-purple-lime {
+            background: linear-gradient(135deg, var(--electric-purple) 0%, var(--neon-lime) 100%);
+        }
+        
+        .gradient-purple-cyan {
+            background: linear-gradient(135deg, var(--electric-purple) 0%, var(--cyan-glow) 100%);
+        }
+        
+        .gradient-dark {
+            background: linear-gradient(180deg, var(--deep-space) 0%, var(--charcoal) 100%);
+        }
+
+        /* Smooth transitions */
+        * {
+            transition: all 0.2s ease;
+        }
+
+        /* Hide Alpine elements before initialization */
+        [x-cloak] { 
+            display: none !important; 
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--light-gray);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--medium-gray);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--charcoal);
+        }
+
+        /* Glow effects */
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+        }
+        
+        .glow-lime {
+            box-shadow: 0 0 20px rgba(132, 204, 22, 0.3);
+        }
+
+        /* Loading animation */
+        .pulse-dot {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+
+        /* Text gradients */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--electric-purple) 0%, var(--cyan-glow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+    </style>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-gray-50 text-gray-900">
+    {% block content %}{% endblock %}
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

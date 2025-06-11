@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+
+{% block title %}Control Center - SkillSpace{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Admin-specific animations */
+    .stat-card {
+        animation: fadeInScale 0.5s ease-out forwards;
+        opacity: 0;
+    }
+    
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .stat-card:nth-child(4) { animation-delay: 0.4s; }
+    
+    /* Live activity pulse */
+    .live-indicator {
+        animation: livePulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes livePulse {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+    }
+    
+    /* Progress ring animation */
+    .progress-ring {
+        transition: stroke-dashoffset 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="adminApp()" x-init="init()">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-gray-900">🎮 Control Center</h1>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full live-indicator"></div>
+                        <span class="text-sm text-gray-600">Live Dashboard</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button @click="exportData"
+                            class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 font-medium transition-colors">
+                        📊 Daten exportieren
+                    </button>
+                    <a href="/workshop" 
+                       class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                        Zurück zum Workshop
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Hero Metrics -->
+    <div class="px-6 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Active Creators -->
+            <div class="stat-card bg-white rounded-xl shadow-lg p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 gradient-purple-cyan opacity-10 rounded-bl-full"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-purple-100 rounded-lg">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-2xl font-bold text-green-500">
+                            +<span x-text="stats.active_users"></span>
+                        </span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900" x-text="stats.total_users"></h3>
+                    <p class="text-sm text-gray-600 mt-1">Kreativ-Helden</p>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-green-600 font-medium" x-text="`${stats.active_users} aktiv`"></span>
+                        <span class="text-gray-400 mx-2">•</span>
+                        <span class="text-gray-500" x-text="`${stats.total_users - stats.active_users} pausierend`"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KI-Power Investment -->
+            <div class="stat-card bg-white rounded-xl shadow-lg p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 gradient-purple-lime opacity-10 rounded-bl-full"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-lime-100 rounded-lg">
+                            <svg class="w-6 h-6 text-lime-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div class="text-sm font-medium text-lime-600">Optimal</div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900">€<span x-text="stats.total_cost.toFixed(2)"></span></h3>
+                    <p class="text-sm text-gray-600 mt-1">KI-Power investiert</p>
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-500">Ø pro Person</span>
+                            <span class="font-medium text-gray-700">€<span x-text="stats.avg_cost_per_user.toFixed(3)"></span></span>
+                        </div>
+                        <div class="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full gradient-purple-lime transition-all duration-500"
+                                 :style="`width: ${Math.min((stats.avg_cost_per_user / workshopInfo.max_cost_per_user) * 100, 100)}%`">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kreativ-Anfragen -->
+            <div class="stat-card bg-white rounded-xl shadow-lg p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-100 opacity-20 rounded-bl-full"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-cyan-100 rounded-lg">
+                            <svg class="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                            </svg>
+                        </div>
+                        <div class="relative w-16 h-16">
+                            <svg class="w-16 h-16 transform -rotate-90">
+                                <circle cx="32" cy="32" r="28" stroke="#e5e7eb" stroke-width="6" fill="none"></circle>
+                                <circle cx="32" cy="32" r="28" stroke="#06b6d4" stroke-width="6" fill="none"
+                                        class="progress-ring"
+                                        :stroke-dasharray="`${2 * Math.PI * 28}`"
+                                        :stroke-dashoffset="`${2 * Math.PI * 28 * (1 - (stats.total_api_calls % 100) / 100)}`">
+                                </circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-xs font-bold text-cyan-600" x-text="`${stats.total_api_calls % 100}`"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900" x-text="stats.total_api_calls"></h3>
+                    <p class="text-sm text-gray-600 mt-1">Kreativ-Anfragen</p>
+                    <div class="mt-4 text-sm">
+                        <span class="text-cyan-600 font-medium">
+                            <span x-text="Math.round(stats.total_api_calls / Math.max(stats.total_users, 1))"></span> Ø pro Person
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Websites Created -->
+            <div class="stat-card bg-white rounded-xl shadow-lg p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 gradient-purple-cyan opacity-10 rounded-bl-full"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="p-3 bg-purple-100 rounded-lg">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                            </svg>
+                        </div>
+                        <span class="text-sm font-medium text-purple-600">Live</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-gray-900" x-text="stats.total_websites"></h3>
+                    <p class="text-sm text-gray-600 mt-1">Websites erstellt</p>
+                    <div class="mt-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="flex -space-x-2">
+                                <template x-for="i in Math.min(5, stats.total_websites)" :key="i">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-cyan-400 rounded-full border-2 border-white flex items-center justify-center">
+                                        <span class="text-white text-xs font-bold" x-text="i"></span>
+                                    </div>
+                                </template>
+                            </div>
+                            <span class="text-sm text-gray-500" x-show="stats.total_websites > 5">
+                                +<span x-text="stats.total_websites - 5"></span> mehr
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content Grid -->
+    <div class="px-6 pb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Activity Feed -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900">Live Aktivitäten</h2>
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-sm text-gray-500">Echtzeit</span>
+                </div>
+            </div>
+            
+            <!-- User Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-sm text-gray-500 border-b border-gray-200">
+                            <th class="pb-3 font-medium">Kreativ-Held</th>
+                            <th class="pb-3 font-medium text-right">KI-Power</th>
+                            <th class="pb-3 font-medium text-right">Anfragen</th>
+                            <th class="pb-3 font-medium text-center">Status</th>
+                            <th class="pb-3 font-medium text-center">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="user in users.slice(0, 10)" :key="user.id">
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                                             :class="`bg-gradient-to-br from-purple-400 to-cyan-400`">
+                                            <span x-text="user.username.charAt(0).toUpperCase()"></span>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900" x-text="user.display_name"></p>
+                                            <p class="text-xs text-gray-500" x-text="`@${user.username}`"></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 text-right">
+                                    <div>
+                                        <p class="font-medium text-gray-900">€<span x-text="user.total_cost.toFixed(3)"></span></p>
+                                        <div class="mt-1 w-20 h-1 bg-gray-200 rounded-full overflow-hidden">
+                                            <div class="h-full transition-all duration-500"
+                                                 :class="{
+                                                     'bg-green-500': user.total_cost < workshopInfo.max_cost_per_user * 0.5,
+                                                     'bg-yellow-500': user.total_cost >= workshopInfo.max_cost_per_user * 0.5 && user.total_cost < workshopInfo.max_cost_per_user * 0.8,
+                                                     'bg-red-500': user.total_cost >= workshopInfo.max_cost_per_user * 0.8
+                                                 }"
+                                                 :style="`width: ${Math.min((user.total_cost / workshopInfo.max_cost_per_user) * 100, 100)}%`">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 text-right">
+                                    <p class="font-medium text-gray-900" x-text="user.total_calls"></p>
+                                </td>
+                                <td class="py-3 text-center">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                          :class="isUserActive(user.last_seen) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
+                                        <span class="w-1.5 h-1.5 rounded-full mr-1.5"
+                                              :class="isUserActive(user.last_seen) ? 'bg-green-500' : 'bg-gray-400'"></span>
+                                        <span x-text="isUserActive(user.last_seen) ? 'Aktiv' : 'Inaktiv'"></span>
+                                    </span>
+                                </td>
+                                <td class="py-3 text-center">
+                                    <button @click="viewUserDetails(user)"
+                                            class="text-purple-600 hover:text-purple-700 font-medium text-sm">
+                                        Details →
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4 text-center" x-show="users.length > 10">
+                <button @click="showAllUsers = true"
+                        class="text-purple-600 hover:text-purple-700 font-medium text-sm">
+                    Alle <span x-text="users.length"></span> Teilnehmer anzeigen →
+                </button>
+            </div>
+        </div>
+        
+        <!-- Workshop Control & Insights -->
+        <div class="space-y-6">
+            <!-- Workshop Status -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Workshop Status</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Status</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium"
+                              :class="workshopInfo.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                            <span x-text="workshopInfo.is_active ? '🟢 Läuft' : '🔴 Beendet'"></span>
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Dauer</span>
+                        <span class="font-medium text-gray-900" x-text="workshopDuration"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Effizienz</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium text-green-600">Exzellent</span>
+                            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <button @click="stopWorkshop"
+                            x-show="workshopInfo.is_active"
+                            class="w-full mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors">
+                        Workshop beenden
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Insights -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Insights</h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <p class="text-sm font-medium text-purple-900">💡 Top-Performer</p>
+                        <p class="text-xs text-purple-700 mt-1">
+                            <span x-text="topPerformer?.username || 'Noch niemand'"></span> hat die meisten Anfragen
+                        </p>
+                    </div>
+                    
+                    <div class="p-3 bg-cyan-50 rounded-lg">
+                        <p class="text-sm font-medium text-cyan-900">🎯 Durchschnittliche Session</p>
+                        <p class="text-xs text-cyan-700 mt-1">
+                            <span x-text="averageSessionTime"></span> pro Teilnehmer
+                        </p>
+                    </div>
+                    
+                    <div class="p-3 bg-lime-50 rounded-lg">
+                        <p class="text-sm font-medium text-lime-900">📈 Trend</p>
+                        <p class="text-xs text-lime-700 mt-1">
+                            Aktivität <span class="font-bold">+23%</span> in den letzten 30 Min
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Details Modal -->
+    <div x-show="selectedUser" x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-cyan-400 flex items-center justify-center text-white text-2xl font-bold">
+                            <span x-text="selectedUser?.username.charAt(0).toUpperCase()"></span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900" x-text="selectedUser?.display_name"></h3>
+                            <p class="text-sm text-gray-500">@<span x-text="selectedUser?.username"></span></p>
+                        </div>
+                    </div>
+                    <button @click="selectedUser = null"
+                            class="p-2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+                <!-- User stats and websites would go here -->
+                <p class="text-gray-600">Detaillierte Benutzerinformationen...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function adminApp() {
+    return {
+        stats: {
+            total_users: 0,
+            active_users: 0,
+            total_cost: 0,
+            total_api_calls: 0,
+            total_websites: 0,
+            avg_cost_per_user: 0
+        },
+        workshopInfo: {
+            id: 0,
+            name: '',
+            is_active: true,
+            max_cost_per_user: 1.00,
+            started_at: new Date()
+        },
+        users: [],
+        selectedUser: null,
+        showAllUsers: false,
+        topPerformer: null,
+        workshopDuration: '0h 0m',
+        averageSessionTime: '0m',
+        
+        async init() {
+            await this.loadData();
+            
+            // Update duration every minute
+            setInterval(() => {
+                this.updateDuration();
+            }, 60000);
+            
+            // Refresh data every 10 seconds for live feel
+            setInterval(() => {
+                this.loadData();
+            }, 10000);
+        },
+        
+        async loadData() {
+            try {
+                const [statsRes, workshopRes, usersRes] = await Promise.all([
+                    fetch('/api/admin/stats'),
+                    fetch('/api/admin/workshop'),
+                    fetch('/api/admin/users')
+                ]);
+                
+                if (!statsRes.ok || !workshopRes.ok || !usersRes.ok) {
+                    throw new Error('Failed to load admin data');
+                }
+                
+                this.stats = await statsRes.json();
+                this.workshopInfo = await workshopRes.json();
+                this.users = await usersRes.json();
+                
+                // Calculate insights
+                this.calculateInsights();
+                this.updateDuration();
+            } catch (error) {
+                console.error('Failed to load admin data:', error);
+                if (error.message.includes('403')) {
+                    alert('Keine Admin-Berechtigung');
+                    window.location.href = '/workshop';
+                }
+            }
+        },
+        
+        calculateInsights() {
+            // Find top performer
+            if (this.users.length > 0) {
+                this.topPerformer = this.users.reduce((prev, current) => 
+                    (prev.total_calls > current.total_calls) ? prev : current
+                );
+            }
+            
+            // Calculate average session time (mock for now)
+            const avgMinutes = Math.round(this.stats.total_api_calls * 2.5);
+            this.averageSessionTime = `${avgMinutes}m`;
+        },
+        
+        updateDuration() {
+            const start = new Date(this.workshopInfo.started_at);
+            const now = new Date();
+            const diff = now - start;
+            
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            
+            this.workshopDuration = `${hours}h ${minutes}m`;
+        },
+        
+        isUserActive(lastSeen) {
+            const date = new Date(lastSeen);
+            const now = new Date();
+            const diffMinutes = (now - date) / 60000;
+            return diffMinutes < 5;
+        },
+        
+        async stopWorkshop() {
+            if (!confirm('Workshop wirklich beenden? Dies kann nicht rückgängig gemacht werden.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/workshop/stop', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    this.workshopInfo.is_active = false;
+                    alert('Workshop wurde beendet');
+                }
+            } catch (error) {
+                alert('Fehler beim Beenden des Workshops');
+            }
+        },
+        
+        async exportData() {
+            try {
+                const response = await fetch('/api/admin/export');
+                const data = await response.json();
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], {
+                    type: 'application/json'
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `workshop-export-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('Export fehlgeschlagen');
+            }
+        },
+        
+        viewUserDetails(user) {
+            this.selectedUser = user;
+        }
+    }
+}
+</script>
+{% endblock %}

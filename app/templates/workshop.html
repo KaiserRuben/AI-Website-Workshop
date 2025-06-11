@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+
+{% block title %}KI-Kreativstudio - SkillSpace{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Modern animations */
+    @keyframes slideInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Message animations */
+    .message-enter { animation: slideInUp 0.3s ease-out; }
+
+    /* Typing indicator */
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #9CA3AF;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Code editor */
+    .code-editor {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #F3F4F6;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #D1D5DB;
+        border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9CA3AF;
+    }
+
+    /* Gradient text */
+    .gradient-text {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Glass effect */
+    .glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-cyan-50"
+     x-data="workshopApp()"
+     x-init="init()"
+     @keydown.window="handleGlobalKeydown($event)">
+
+    <!-- Header -->
+    <header class="glass border-b border-gray-200 z-20">
+        <div class="px-6 h-16 flex items-center justify-between">
+            <!-- Logo & User Info -->
+            <div class="flex items-center space-x-8">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-xl font-bold gradient-text">SkillSpace</h1>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm">
+                        <span class="text-gray-600">Hallo,</span>
+                        <span class="font-semibold text-gray-800" x-text="user.username"></span>
+                    </div>
+                    <a :href="user.role === 'admin' ? '/admin' : '#'" 
+                       :class="user.role === 'admin' ? 'hover:bg-purple-200 transition-colors' : 'cursor-default'"
+                       class="px-3 py-1 text-xs font-medium rounded-full"
+                       :class="user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'"
+                       x-text="user.role === 'admin' ? 'Admin' : 'Kreativ-Held'">
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status & Actions -->
+            <div class="flex items-center space-x-6">
+                <!-- AI Usage Meter -->
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm font-medium text-gray-600">KI-Power:</span>
+                    <div class="relative">
+                        <div class="w-40 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full transition-all duration-500 rounded-full"
+                                 :class="costIndicatorClass"
+                                 :style="`width: ${Math.min(costPercentage, 100)}%`">
+                            </div>
+                        </div>
+                        <span class="absolute -top-6 left-0 text-xs font-semibold"
+                              :class="costTextClass"
+                              x-text="`€${totalCost.toFixed(3)} / €${maxCost.toFixed(2)}`">
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Connection Status -->
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-gray-500" x-text="connectionStatus"></span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-2">
+                    <a href="gallery"> <button
+                            class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">
+                        🎨 Galerie
+                    </button></a>
+                    <button @click="showHelp = true"
+                            class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <button @click="showSettings = true"
+                            class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Left: Website Preview -->
+        <div class="flex-1 flex flex-col bg-gray-50">
+            <!-- Preview Toolbar -->
+            <div class="bg-white border-b border-gray-200 px-4 py-2" x-data="{ showActionMenu: false }">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-6">
+                        <h2 class="text-lg font-semibold text-gray-800">Deine Website</h2>
+                        <div class="text-xs text-gray-500">
+                            <span x-text="lastSaved"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <!-- Device Preview Toggle -->
+                        <div class="flex items-center bg-gray-100 rounded-lg p-0.5">
+                            <button @click="previewDevice = 'desktop'"
+                                    :class="previewDevice === 'desktop' ? 'bg-white shadow-sm' : ''"
+                                    class="p-1.5 rounded transition-all"
+                                    title="Desktop">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                            <button @click="previewDevice = 'tablet'"
+                                    :class="previewDevice === 'tablet' ? 'bg-white shadow-sm' : ''"
+                                    class="p-1.5 rounded transition-all"
+                                    title="Tablet">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                            <button @click="previewDevice = 'mobile'"
+                                    :class="previewDevice === 'mobile' ? 'bg-white shadow-sm' : ''"
+                                    class="p-1.5 rounded transition-all"
+                                    title="Mobile">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Main Actions -->
+                        <button @click="downloadWebsite"
+                                class="px-3 py-1 bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-xs font-medium rounded-md hover:shadow-lg transition-all">
+                            ⬇️ Download
+                        </button>
+
+                        <!-- More Actions Menu -->
+                        <div class="relative">
+                            <button @click="showActionMenu = !showActionMenu"
+                                    class="p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
+                                    title="Weitere Aktionen">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                </svg>
+                            </button>
+
+                            <!-- Dropdown Menu -->
+                            <div x-show="showActionMenu"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 @click.away="showActionMenu = false"
+                                 class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                
+                                <button @click="refreshPreview; showActionMenu = false"
+                                        class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                                    <span>🔄</span>
+                                    <span>Aktualisieren</span>
+                                </button>
+                                
+                                <button @click="rollbackWebsite; showActionMenu = false"
+                                        class="w-full px-4 py-2 text-left text-sm text-amber-600 hover:bg-amber-50 flex items-center space-x-2">
+                                    <span>↶</span>
+                                    <span>Rückgängig</span>
+                                </button>
+                                
+                                <div class="border-t border-gray-100 my-1"></div>
+                                
+                                <button @click="resetWebsite; showActionMenu = false"
+                                        class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2">
+                                    <span>🗑️</span>
+                                    <span>Zurücksetzen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Container -->
+            <div class="flex-1 p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+                <div class="h-full flex items-center justify-center">
+                    <div class="transition-all duration-300"
+                         :class="previewContainerClass">
+                        <iframe
+                            x-ref="previewFrame"
+                            :srcdoc="previewContent"
+                            class="w-full h-full bg-white"
+                            sandbox="allow-scripts allow-same-origin allow-modals">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Chat/Code Panel -->
+        <div class="w-[450px] bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+            <!-- Panel Tabs -->
+            <div class="border-b border-gray-200">
+                <div class="flex">
+                    <button @click="activePanel = 'chat'"
+                            :class="activePanel === 'chat' ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-800'"
+                            class="flex-1 px-4 py-3 text-sm font-medium transition-all">
+                        💬 KI-Assistent
+                    </button>
+                    <button @click="activePanel = 'code'"
+                            :class="activePanel === 'code' ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-800'"
+                            class="flex-1 px-4 py-3 text-sm font-medium transition-all">
+                        <span>👩‍💻 Code Editor</span>
+                        <span class="text-xs text-gray-500 block">Für Fortgeschrittene</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div x-show="activePanel === 'chat'" class="flex-1 flex flex-col overflow-hidden">
+                <!-- Quick Actions -->
+                <div class="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-cyan-50">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-xs font-medium text-gray-600">Schnell-Aktionen</p>
+                        <button @click="showAllActions = !showAllActions"
+                                class="text-xs text-purple-600 hover:text-purple-700">
+                            <span x-text="showAllActions ? 'Weniger' : 'Mehr'"></span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-2" x-show="!showAllActions">
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="action in quickActions.slice(0, 4)" :key="action.prompt">
+                                <button @click="sendQuickAction(action)"
+                                        class="px-3 py-1 text-xs font-medium bg-white rounded-full shadow-sm hover:shadow-md transition-all transform hover:scale-105"
+                                        :title="action.prompt">
+                                    <span x-text="action.icon + ' ' + action.title"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3" x-show="showAllActions">
+                        <template x-for="category in quickActionCategories" :key="category.name">
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 mb-1" x-text="category.name"></p>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="action in category.actions" :key="action.prompt">
+                                        <button @click="sendQuickAction(action)"
+                                                class="px-3 py-1 text-xs font-medium bg-white rounded-full shadow-sm hover:shadow-md transition-all transform hover:scale-105"
+                                                :title="action.prompt">
+                                            <span x-text="action.icon + ' ' + action.title"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 h-0" x-ref="chatContainer">
+                    <!-- Welcome Message -->
+                    <div x-show="messages.length === 0" class="text-center py-8">
+                        <div class="inline-block p-4 bg-gradient-to-br from-purple-100 to-cyan-100 rounded-2xl mb-4">
+                            <span class="text-4xl">🚀</span>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Willkommen im KI-Kreativstudio!</h3>
+                        <p class="text-sm text-gray-600 max-w-xs mx-auto">
+                            Beschreibe mir einfach, was du auf deiner Website haben möchtest, und ich helfe dir dabei!
+                        </p>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="space-y-4">
+                        <template x-for="message in messages" :key="message.id">
+                            <div class="message-enter flex"
+                                 :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
+                                <div class="max-w-[80%]">
+                                    <div class="rounded-2xl px-4 py-3"
+                                         :class="message.role === 'user'
+                                                 ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
+                                                 : 'bg-gray-100 text-gray-800'">
+                                        <p class="text-sm whitespace-pre-wrap" x-text="message.content"></p>
+                                    </div>
+                                    <p class="text-xs mt-1 px-2"
+                                       :class="message.role === 'user' ? 'text-right text-gray-400' : 'text-gray-400'"
+                                       x-text="formatTime(message.timestamp)">
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Typing Indicator -->
+                    <div x-show="isAiThinking" class="flex justify-start mt-4">
+                        <div class="bg-gray-100 rounded-2xl px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-600">KI denkt nach</span>
+                                <div class="flex space-x-1">
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                    <div class="typing-dot"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Follow-up Suggestions -->
+                    <div x-show="followUpSuggestions.length > 0 && !isAiThinking" class="mt-4">
+                        <p class="text-xs text-gray-500 mb-2">Vorschläge für dich:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="suggestion in followUpSuggestions" :key="suggestion.title">
+                                <button @click="sendQuickAction(suggestion)"
+                                        class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-purple-100 to-cyan-100 text-gray-700 rounded-full hover:from-purple-200 hover:to-cyan-200 transition-all transform hover:scale-105 shadow-sm">
+                                    <span x-text="suggestion.icon + ' ' + suggestion.title"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <form @submit.prevent="sendMessage" class="p-4 border-t border-gray-200">
+                    <div class="flex space-x-2">
+                        <div class="flex-1 relative">
+                            <input
+                                type="text"
+                                x-model="currentMessage"
+                                x-ref="messageInput"
+                                @keydown="handleInputKeydown($event)"
+                                class="w-full px-4 py-2.5 pr-10 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                                placeholder="Was möchtest du ändern?"
+                                :disabled="isAiThinking"
+                                maxlength="500"
+                            >
+                            <span class="absolute right-3 top-3 text-xs text-gray-400"
+                                  x-show="currentMessage.length > 450"
+                                  x-text="`${currentMessage.length}/500`">
+                            </span>
+                        </div>
+                        <button
+                            type="submit"
+                            :disabled="!currentMessage.trim() || isAiThinking"
+                            class="px-5 py-2.5 rounded-lg font-medium text-white transition-all duration-300 transform"
+                            :class="currentMessage.trim() && !isAiThinking
+                                    ? 'bg-gradient-to-r from-purple-600 to-cyan-600 hover:shadow-lg hover:scale-105'
+                                    : 'bg-gray-300 cursor-not-allowed'">
+                            <span x-show="!isAiThinking">Senden</span>
+                            <span x-show="isAiThinking">...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Code Panel -->
+            <div x-show="activePanel === 'code'" class="flex-1 flex flex-col">
+                <!-- Code Tabs -->
+                <div class="flex border-b border-gray-200 bg-gray-50">
+                    <template x-for="tab in ['html', 'css', 'js']" :key="tab">
+                        <button @click="activeCodeTab = tab"
+                                :class="activeCodeTab === tab ? 'bg-white text-purple-700 border-b-2 border-purple-500' : 'text-gray-600 hover:text-gray-800'"
+                                class="flex-1 px-4 py-2 text-sm font-medium uppercase transition-all">
+                            <span x-text="tab"></span>
+                            <span x-show="codeErrors[tab]" class="ml-1 text-red-500">⚠️</span>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- Code Editor -->
+                <div class="flex-1 relative bg-gray-900">
+                    <div class="absolute inset-0 flex">
+                        <!-- Line Numbers -->
+                        <div class="w-12 bg-gray-800 text-gray-500 text-right py-4 px-2 overflow-hidden">
+                            <template x-for="line in lineNumbers" :key="line">
+                                <div class="code-editor leading-6" x-text="line"></div>
+                            </template>
+                        </div>
+
+                        <!-- Code Area -->
+                        <div class="flex-1 relative">
+                            <textarea
+                                x-model="code[activeCodeTab]"
+                                @input="handleCodeChange"
+                                @scroll="syncLineNumbers($event)"
+                                class="absolute inset-0 w-full h-full bg-gray-900 text-gray-100 p-4 code-editor resize-none focus:outline-none custom-scrollbar"
+                                :placeholder="`// ${activeCodeTab.toUpperCase()} Code hier eingeben...`"
+                                spellcheck="false"
+                                wrap="off">
+                            </textarea>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div x-show="codeErrors[activeCodeTab]"
+                         class="absolute bottom-0 left-0 right-0 bg-red-900 border-t border-red-700 p-3">
+                        <div class="flex items-start space-x-2 text-red-200 text-sm">
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                            </svg>
+                            <span x-text="codeErrors[activeCodeTab]"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code Actions -->
+                <div class="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                    <div class="text-xs text-gray-500">
+                        <span x-text="lineNumbers.length"></span> Zeilen
+                    </div>
+                    <div class="flex space-x-2">
+                        <button @click="formatCode"
+                                class="px-3 py-1 text-xs font-medium text-gray-600 hover:text-purple-600 transition-colors">
+                            ✨ Formatieren
+                        </button>
+                        <button @click="validateCode"
+                                class="px-3 py-1 text-xs font-medium text-gray-600 hover:text-purple-600 transition-colors">
+                            ✅ Validieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Settings Modal -->
+    <div x-show="showSettings"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.self="showSettings = false">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-90"
+             x-transition:enter-end="opacity-100 transform scale-100">
+            <h3 class="text-lg font-semibold mb-4">Einstellungen</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Anzeigename</label>
+                    <input type="text"
+                           x-model="user.displayName"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Theme</label>
+                    <select x-model="settings.theme"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                        <option value="light">Hell</option>
+                        <option value="dark">Dunkel</option>
+                        <option value="auto">Automatisch</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox"
+                               x-model="settings.autoSave"
+                               class="rounded text-purple-600 focus:ring-purple-500">
+                        <span class="text-sm text-gray-700">Automatisches Speichern</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-between mt-6 pt-4 border-t">
+                <button @click="showSettings = false"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors">
+                    Abbrechen
+                </button>
+                <button @click="logout"
+                        class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors">
+                    Abmelden
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div x-show="showHelp"
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.self="showHelp = false">
+        <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">Hilfe & Tipps</h3>
+
+            <div class="space-y-4 text-sm">
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-2">🚀 Erste Schritte</h4>
+                    <p class="text-gray-600">Beschreibe einfach in eigenen Worten, was du auf deiner Website haben möchtest. Die KI versteht dich!</p>
+                </div>
+
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-2">💡 Beispiel-Prompts</h4>
+                    <ul class="list-disc list-inside text-gray-600 space-y-1">
+                        <li>"Mache einen coolen Header mit meinem Namen"</li>
+                        <li>"Füge eine Bildergalerie hinzu"</li>
+                        <li>"Erstelle ein Kontaktformular"</li>
+                        <li>"Mache die Seite dunkel mit Neon-Effekten"</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-2">⌨️ Tastenkürzel</h4>
+                    <ul class="text-gray-600 space-y-1">
+                        <li><kbd class="px-2 py-1 bg-gray-100 rounded text-xs">Strg + Enter</kbd> - Nachricht senden</li>
+                        <li><kbd class="px-2 py-1 bg-gray-100 rounded text-xs">Strg + K</kbd> - Code-Editor öffnen</li>
+                        <li><kbd class="px-2 py-1 bg-gray-100 rounded text-xs">Strg + S</kbd> - Speichern</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button @click="showHelp = false"
+                    class="mt-6 w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors">
+                Verstanden!
+            </button>
+        </div>
+    </div>
+
+    <!-- Achievement Toast -->
+    <div x-show="showAchievement"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0 transform translate-y-4"
+         class="fixed bottom-4 right-4 bg-white rounded-lg shadow-2xl p-4 max-w-sm border-l-4 border-purple-500"
+         @click.away="showAchievement = false">
+        <div class="flex items-center space-x-3">
+            <div class="text-3xl" x-text="currentAchievement.icon"></div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-800" x-text="currentAchievement.title"></p>
+                <p class="text-sm text-gray-600" x-text="currentAchievement.description"></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/workshop.js"></script>
+{% endblock %}
