@@ -1016,6 +1016,29 @@ function workshopApp() {
             }
         },
 
+        renderMarkdown(text) {
+            if (!text || typeof marked === 'undefined') {
+                return text || '';
+            }
+            
+            try {
+                // Configure marked options for better rendering
+                marked.setOptions({
+                    breaks: true, // Support line breaks
+                    gfm: true, // GitHub flavored markdown
+                    sanitize: false, // We trust the AI content
+                    smartLists: true,
+                    smartypants: true
+                });
+                
+                return marked.parse(text);
+            } catch (error) {
+                console.warn('Markdown rendering error:', error);
+                // Fallback to plain text with basic formatting
+                return text.replace(/\n/g, '<br>');
+            }
+        },
+
         formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;

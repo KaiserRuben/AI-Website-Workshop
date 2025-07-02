@@ -204,7 +204,6 @@ async def get_gallery(
         .where(Website.html.isnot(None))
         .where(Website.html != "")
         .where(Website.is_public == True)
-        .where(Website.is_deployed == True)
         .group_by(Website.id, User.id)
     )
     
