@@ -279,3 +279,7 @@ Bei Fragen oder Problemen:
 - [ ] CI/CD Pipeline Integration
 - [ ] Versionskontrolle (Git)
 - [ ] Collaboration Features
+
+---
+
+**Copyright © 2024 Ruben Kaiser**

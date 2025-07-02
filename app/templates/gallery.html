@@ -101,10 +101,10 @@
                         
                         <!-- Hover Overlay -->
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-4">
-                            <button @click.stop="viewProject(project)" 
-                                    class="px-4 py-2 bg-white/90 backdrop-blur text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors">
+                            <a @click.stop :href="`/u/${project.username}/${project.slug}`" 
+                               class="px-4 py-2 bg-white/90 backdrop-blur text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors">
                                 Ansehen
-                            </button>
+                            </a>
                             <button @click.stop="openProjectFullscreen(project)"
                                     class="px-3 py-2 bg-purple-600/90 backdrop-blur text-white rounded-lg font-medium text-sm hover:bg-purple-600 transition-colors flex items-center space-x-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +134,15 @@
                         </div>
                         
                         <div class="flex items-center justify-between text-sm text-gray-500">
-                            <span x-text="formatTime(project.updated_at)"></span>
+                            <div class="flex items-center space-x-3">
+                                <span x-text="formatTime(project.updated_at)"></span>
+                                <!-- Image indicator -->
+                                <span x-show="project.has_images" 
+                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-700"
+                                      title="Verwendet Bilder">
+                                    🖼️ Bilder
+                                </span>
+                            </div>
                             <span class="flex items-center space-x-1">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>

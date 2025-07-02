@@ -9,8 +9,9 @@ import structlog
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, workshop, projects, websocket, admin
+from app.routers import auth, workshop, projects, websocket, admin, images, public
 from app.middleware import AuthenticationMiddleware
+from app.services.deployment import get_published_site
 
 # Configure structured logging
 structlog.configure(
@@ -77,16 +78,46 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(workshop.router, prefix="/api", tags=["workshop"])
 app.include_router(projects.router, prefix="/api", tags=["projects"])
+app.include_router(images.router, tags=["images"])
 app.include_router(websocket.router, tags=["websocket"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(public.router, tags=["public"])
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Workshop entry page"""
+    """Workshop entry page or published site"""
+    host = request.headers.get("host", "")
+    
+    # Check if this is a subdomain request for a published site
+    if "." in host and not host.startswith("workshop.") and not host in ["localhost", "127.0.0.1"]:
+        # Extract subdomain (everything before the first dot)
+        subdomain = host.split(".")[0]
+        published_site = await get_published_site(subdomain)
+        if published_site:
+            return HTMLResponse(content=published_site)
+    
+    # Check if user is already logged in and redirect to landing
+    user = getattr(request.state, 'user', None)
+    if user:
+        return templates.TemplateResponse(
+            "landing.html",
+            {"request": request, "title": "SkillSpace - Lernpfad"}
+        )
+    
+    # Default workshop entry page for non-authenticated users
     return templates.TemplateResponse(
         "entry.html",
         {"request": request, "title": "KI Website Workshop"}
+    )
+
+
+@app.get("/landing", response_class=HTMLResponse)
+async def landing_page(request: Request):
+    """New landing page with recent projects and template guidance"""
+    return templates.TemplateResponse(
+        "landing.html",
+        {"request": request, "title": "SkillSpace - Lernpfad"}
     )
 
 

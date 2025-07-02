@@ -8,6 +8,7 @@ import secrets
 
 from app.database import get_db
 from app.models import User, Workshop, Website, UserRole
+from app.services.project_service import ProjectCreationService
 from app.config import get_settings
 
 router = APIRouter()
@@ -114,12 +115,11 @@ async def signup(
         await db.commit()
     
     # Create default website
-    website = Website(
-        user_id=user.id,
-        name=f"{user.username}s Website"
+    await ProjectCreationService.create_project(
+        db=db,
+        user=user,
+        is_default_project=True
     )
-    db.add(website)
-    await db.commit()
     
     # Set session cookie (persistent)
     response.set_cookie(
@@ -301,14 +301,11 @@ async def join_workshop(
         await db.commit()
     
     # Create default website
-    website = Website(
-        user_id=user.id,
-        name=f"{user.username}s Website",
-        html="<h1>Willkommen auf meiner Website!</h1>",
-        css="body { font-family: Arial, sans-serif; margin: 20px; }"
+    await ProjectCreationService.create_project(
+        db=db,
+        user=user,
+        is_default_project=True
     )
-    db.add(website)
-    await db.commit()
     
     # Set session cookie (persistent)
     response.set_cookie(

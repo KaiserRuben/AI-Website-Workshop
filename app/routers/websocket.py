@@ -46,6 +46,10 @@ class ConnectionManager:
                 await self.active_connections[user_id].send_text(json.dumps(message))
             except:
                 self.disconnect(user_id)
+    
+    async def broadcast_to_user(self, user_id: int, message: dict):
+        """Alias for send_personal_message for consistency"""
+        await self.send_personal_message(message, user_id)
                 
     async def broadcast_to_workshop(self, message: dict, workshop_id: int, exclude_user: Optional[int] = None):
         disconnected = []
@@ -120,31 +124,42 @@ async def websocket_endpoint(
     
     await manager.connect(websocket, user.id, session_token)
     
-    # Get user's active website to send current state
+    # Get user's projects to send current state
     result = await db.execute(
         select(Website)
         .options(selectinload(Website.user))
         .where(Website.user_id == user.id)
-        .where(Website.is_active == True)
+        .order_by(Website.updated_at.desc())
     )
-    website = result.scalar_one_or_none()
+    projects = result.scalars().all()
     
-    # Send welcome message with current code state
+    # Send welcome message with projects list
     welcome_message = {
         "type": "connection_status", 
         "status": "connected",
         "user_id": user.id,
-        "username": user.username
+        "username": user.username,
+        "projects": [{
+            "id": p.id,
+            "name": p.name,
+            "slug": p.slug,
+            "is_active": p.is_active,
+            "is_public": p.is_public,
+            "is_collaborative": p.is_collaborative,
+            "updated_at": p.updated_at.isoformat()
+        } for p in projects]
     }
     
-    if website:
-        # Send current database state to sync frontend
+    # Send current active project code if exists
+    active_project = next((p for p in projects if p.is_active), None)
+    if active_project:
         await manager.send_personal_message({
             "type": "code_update",
+            "project_id": active_project.id,
             "code": {
-                "html": website.html,
-                "css": website.css,
-                "js": website.js
+                "html": active_project.html,
+                "css": active_project.css,
+                "js": active_project.js
             },
             "changeType": "sync",
             "sync": True  # Flag to indicate this is initial sync
@@ -180,6 +195,21 @@ async def websocket_endpoint(
                     message, user, db
                 )
                 
+            elif message_type == "switch_project":
+                await handle_switch_project(
+                    message, user, db
+                )
+                
+            elif message_type == "create_project":
+                await handle_create_project(
+                    message, user, db
+                )
+                
+            elif message_type == "toggle_project_public":
+                await handle_toggle_project_public(
+                    message, user, db
+                )
+                
     except WebSocketDisconnect:
         manager.disconnect(user.id)
     except Exception as e:
@@ -197,6 +227,7 @@ async def handle_ai_request(
     """Handle AI request from user"""
     prompt = message.get("prompt", "")
     current_code = message.get("currentCode", {})
+    project_id = message.get("project_id")
     
     # Check if user can make API call
     can_call, reason = await cost_tracker.can_make_api_call(user.id)
@@ -207,18 +238,28 @@ async def handle_ai_request(
         }, user.id)
         return
     
-    # Get user's active website
-    result = await db.execute(
-        select(Website)
-        .options(selectinload(Website.user))
-        .where(Website.user_id == user.id)
-        .where(Website.is_active == True)
-    )
-    website = result.scalar_one_or_none()
+    # Get the specified project or user's active website
+    if project_id:
+        result = await db.execute(
+            select(Website)
+            .options(selectinload(Website.user))
+            .where(Website.id == project_id)
+            .where(Website.user_id == user.id)
+        )
+        website = result.scalar_one_or_none()
+    else:
+        result = await db.execute(
+            select(Website)
+            .options(selectinload(Website.user))
+            .where(Website.user_id == user.id)
+            .where(Website.is_active == True)
+        )
+        website = result.scalar_one_or_none()
+    
     if not website:
         await manager.send_personal_message({
             "type": "error",
-            "message": "Keine aktive Website gefunden"
+            "message": "Projekt nicht gefunden"
         }, user.id)
         return
     
@@ -234,10 +275,24 @@ async def handle_ai_request(
         # Log for debugging
         logger.info(f"Using current code from database for AI - HTML preview: {actual_current_code['html'][:100]}...")
         
+        # Get user's images for AI context
+        from app.services.image_service import ImageService
+        user_images = await ImageService.get_user_images_for_ai_context(
+            user_id=user.id,
+            website_id=website.id,  # Use website.id as context
+            db=db
+        )
+        
+        # Get user's learned concepts
+        user_learned_concepts = user.learned_concepts or []
+        
         # Generate AI response
         llm_response, response_data = await azure_ai.generate_response(
             prompt=prompt,
-            current_code=actual_current_code
+            current_code=actual_current_code,
+            context="code_generation",
+            user_images=user_images,
+            learned_concepts=user_learned_concepts
         )
         
         # Calculate cost
@@ -261,13 +316,30 @@ async def handle_ai_request(
             user_id=user.id,
             website_id=website.id,
             prompt=prompt,
-            response_type=response_type,
+            response_type=response_type.value,  # Use .value to get the string value
             response_data=response_data,
             prompt_tokens=llm_response.prompt_tokens,
             completion_tokens=llm_response.completion_tokens,
             cost=cost,
             duration_ms=0  # Add timing if needed
         )
+        
+        # Update learned concepts if new ones were introduced
+        if "new_concepts" in response_data and response_data["new_concepts"]:
+            new_concepts = response_data["new_concepts"]
+            updated_concepts = list(set(user_learned_concepts + new_concepts))
+            
+            # Update user's learned concepts in database
+            from sqlalchemy import update
+            from app.models.user import User
+            await db.execute(
+                update(User)
+                .where(User.id == user.id)
+                .values(learned_concepts=updated_concepts)
+            )
+            await db.commit()
+            
+            logger.info(f"Updated learned concepts for user {user.id}: added {new_concepts}")
         
         # Send chat message
         await manager.send_personal_message({
@@ -277,7 +349,15 @@ async def handle_ai_request(
         }, user.id)
         
         # Process code changes
-        if response_data["response_type"].lower() in ["update", "rewrite"]:
+        if response_data["response_type"].lower() in ["update", "update_all", "rewrite"]:
+            # Check for ambiguous updates that need disambiguation
+            if response_data["response_type"].lower() == "update" and response_data.get("updates"):
+                needs_disambiguation = await check_for_disambiguation_needed(
+                    response_data, actual_current_code, user, db, azure_ai, cost_tracker, prompt
+                )
+                if needs_disambiguation:
+                    return  # Disambiguation request sent, don't process original request
+            
             # Refresh website object to ensure it's attached to the session
             await db.refresh(website)
             await process_code_changes(
@@ -302,6 +382,115 @@ async def handle_ai_request(
         }, user.id)
 
 
+async def check_for_disambiguation_needed(
+    response_data: dict,
+    current_code: Dict[str, str],
+    user: User,
+    db: AsyncSession,
+    azure_ai: AzureAIService,
+    cost_tracker: CostTracker,
+    original_prompt: str
+) -> bool:
+    """Check if disambiguation is needed for update operations"""
+    updates = response_data.get("updates", [])
+    
+    for update in updates:
+        old_str = update.get("old_str", "")
+        if not old_str:
+            continue
+            
+        # Find all matches for this old_str
+        matches = azure_ai.find_multiple_matches(old_str, current_code)
+        
+        if len(matches) > 1:
+            # Multiple matches found, need disambiguation
+            logger.info(f"Found {len(matches)} matches for '{old_str}', requesting disambiguation")
+            
+            # Check if user can make another API call
+            can_call, reason = await cost_tracker.can_make_api_call(user.id)
+            if not can_call:
+                await manager.send_personal_message({
+                    "type": "error",
+                    "message": f"Mehrere Treffer gefunden, aber {reason}"
+                }, user.id)
+                return True  # Stop processing
+                
+            try:
+                # Ask LLM for clarification
+                website = await get_user_active_website(user, db)
+                if not website:
+                    return False
+                    
+                llm_response, clarification_data = await azure_ai.disambiguate_multiple_matches(
+                    original_request=original_prompt,
+                    old_str=old_str,
+                    matches=matches,
+                    current_code=current_code
+                )
+                
+                # Calculate cost for disambiguation call
+                cost = azure_ai.calculate_cost(
+                    llm_response.prompt_tokens,
+                    llm_response.completion_tokens
+                )
+                
+                # Record the disambiguation API call
+                from app.models.llm import ResponseType
+                await cost_tracker.record_api_call(
+                    user_id=user.id,
+                    website_id=website.id,
+                    prompt=f"Disambiguation for: {original_prompt}",
+                    response_type=ResponseType.CHAT,  # Disambiguation is always chat first
+                    response_data=clarification_data,
+                    prompt_tokens=llm_response.prompt_tokens,
+                    completion_tokens=llm_response.completion_tokens,
+                    cost=cost,
+                    duration_ms=0
+                )
+                
+                # Send clarification message
+                await manager.send_personal_message({
+                    "type": "chat_message",
+                    "role": "assistant",
+                    "content": llm_response.content
+                }, user.id)
+                
+                # Process the clarification response
+                if clarification_data["response_type"].lower() in ["update", "update_all", "rewrite"]:
+                    await process_code_changes(clarification_data, website, user, db)
+                
+                # Send cost update
+                stats = await cost_tracker.get_user_stats(user.id)
+                await manager.send_personal_message({
+                    "type": "cost_update",
+                    "totalCost": stats["total_cost"],
+                    "lastCallCost": cost,
+                    "costPercentage": stats["cost_percentage"]
+                }, user.id)
+                
+                return True  # Disambiguation handled
+                
+            except Exception as e:
+                logger.error(f"Disambiguation error: {e}")
+                await manager.send_personal_message({
+                    "type": "error",
+                    "message": "Fehler bei der Klärung der Änderung"
+                }, user.id)
+                return True  # Stop processing
+    
+    return False  # No disambiguation needed
+
+
+async def get_user_active_website(user: User, db: AsyncSession) -> Optional[Website]:
+    """Get user's active website"""
+    result = await db.execute(
+        select(Website)
+        .where(Website.user_id == user.id)
+        .where(Website.is_active == True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def process_code_changes(
     response_data: dict,
     website: Website,
@@ -309,24 +498,34 @@ async def process_code_changes(
     db: AsyncSession
 ):
     """Process code changes from AI response"""
+    response_type = response_data["response_type"].lower()
+    
     # Save current state to history
+    change_type = ChangeType.AI_REWRITE
+    if response_type in ["update", "update_all"]:
+        change_type = ChangeType.AI_UPDATE
+        
     history = CodeHistory(
         website_id=website.id,
         html=website.html,
         css=website.css,
         js=website.js,
-        change_type=ChangeType.AI_UPDATE if response_data["response_type"].lower() == "update" else ChangeType.AI_REWRITE
+        change_type=change_type
     )
     db.add(history)
     
-    if response_data["response_type"].lower() == "update":
+    if response_type in ["update", "update_all"]:
         # Apply updates
         current_code = {
             "html": website.html,
             "css": website.css,
             "js": website.js
         }
-        new_code = CodeProcessor.apply_updates(current_code, response_data.get("updates", []))
+        new_code = CodeProcessor.apply_updates(
+            current_code, 
+            response_data.get("updates", []),
+            apply_all=(response_type == "update_all")
+        )
     else:
         # Complete rewrite
         new_code = response_data.get("new_code", {})
@@ -347,23 +546,32 @@ async def process_code_changes(
     # Send code update
     await manager.send_personal_message({
         "type": "code_update",
+        "project_id": website.id,
         "code": new_code,
         "changeType": response_data["response_type"]
     }, user.id)
     
-    # Update gallery
-    await gallery_manager.queue_update(
-        user.id,
-        {
-            "html": website.html,
-            "css": website.css,
-            "js": website.js,
-            "name": website.name,
-            "username": user.username,
-            "updated_at": website.updated_at.isoformat()
-        },
-        user.workshop_id
-    )
+    # Update gallery (only if project is public)
+    if website.is_public:
+        await gallery_manager.queue_update(
+            user.id,
+            {
+                "project_id": website.id,
+                "html": website.html,
+                "css": website.css,
+                "js": website.js,
+                "name": website.name,
+                "slug": website.slug,
+                "description": website.description,
+                "tags": website.tags or [],
+                "username": user.username,
+                "user_display_name": user.display_name,
+                "is_collaborative": website.is_collaborative,
+                "has_images": website.has_images,
+                "updated_at": website.updated_at.isoformat()
+            },
+            user.workshop_id
+        )
 
 
 async def handle_code_update(
@@ -373,16 +581,31 @@ async def handle_code_update(
 ):
     """Handle manual code update"""
     code = message.get("code", {})
+    project_id = message.get("project_id")
     
-    # Get user's active website
-    result = await db.execute(
-        select(Website)
-        .options(selectinload(Website.user))
-        .where(Website.user_id == user.id)
-        .where(Website.is_active == True)
-    )
-    website = result.scalar_one_or_none()
+    # Get the specified project or user's active website
+    if project_id:
+        result = await db.execute(
+            select(Website)
+            .options(selectinload(Website.user))
+            .where(Website.id == project_id)
+            .where(Website.user_id == user.id)
+        )
+        website = result.scalar_one_or_none()
+    else:
+        result = await db.execute(
+            select(Website)
+            .options(selectinload(Website.user))
+            .where(Website.user_id == user.id)
+            .where(Website.is_active == True)
+        )
+        website = result.scalar_one_or_none()
+    
     if not website:
+        await manager.send_personal_message({
+            "type": "error",
+            "message": "Projekt nicht gefunden"
+        }, user.id)
         return
     
     # Validate code
@@ -415,23 +638,32 @@ async def handle_code_update(
     # Send save confirmation back to user
     await manager.send_personal_message({
         "type": "save_confirmation",
+        "project_id": website.id,
         "timestamp": website.updated_at.isoformat(),
         "message": "Code gespeichert"
     }, user.id)
     
-    # Update gallery
-    await gallery_manager.queue_update(
-        user.id,
-        {
-            "html": website.html,
-            "css": website.css,
-            "js": website.js,
-            "name": website.name,
-            "username": user.username,
-            "updated_at": website.updated_at.isoformat()
-        },
-        user.workshop_id
-    )
+    # Update gallery (only if project is public)
+    if website.is_public:
+        await gallery_manager.queue_update(
+            user.id,
+            {
+                "project_id": website.id,
+                "html": website.html,
+                "css": website.css,
+                "js": website.js,
+                "name": website.name,
+                "slug": website.slug,
+                "description": website.description,
+                "tags": website.tags or [],
+                "username": user.username,
+                "user_display_name": user.display_name,
+                "is_collaborative": website.is_collaborative,
+                "has_images": website.has_images,
+                "updated_at": website.updated_at.isoformat()
+            },
+            user.workshop_id
+        )
 
 
 async def handle_toggle_like(
@@ -510,3 +742,195 @@ async def handle_toggle_like(
         "website_id": website_id,
         "likes_count": likes_count
     }, user.workshop_id)
+
+
+async def handle_switch_project(
+    message: dict,
+    user: User,
+    db: AsyncSession
+):
+    """Handle switching active project"""
+    project_id = message.get("project_id")
+    
+    if not project_id:
+        await manager.send_personal_message({
+            "type": "error",
+            "message": "Projekt ID fehlt"
+        }, user.id)
+        return
+    
+    # Verify project belongs to user
+    result = await db.execute(
+        select(Website)
+        .where(Website.id == project_id)
+        .where(Website.user_id == user.id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        await manager.send_personal_message({
+            "type": "error",
+            "message": "Projekt nicht gefunden"
+        }, user.id)
+        return
+    
+    # Set all user's projects to inactive
+    result = await db.execute(
+        select(Website).where(Website.user_id == user.id)
+    )
+    user_projects = result.scalars().all()
+    
+    for p in user_projects:
+        p.is_active = False
+    
+    # Set selected project as active
+    project.is_active = True
+    
+    await db.commit()
+    await db.refresh(project)
+    
+    # Send project switch confirmation with code
+    await manager.send_personal_message({
+        "type": "project_switched",
+        "project_id": project.id,
+        "code": {
+            "html": project.html,
+            "css": project.css,
+            "js": project.js
+        },
+        "project_name": project.name
+    }, user.id)
+
+
+async def handle_create_project(
+    message: dict,
+    user: User,
+    db: AsyncSession
+):
+    """Handle creating a new project"""
+    project_name = message.get("name", "Neues Projekt")
+    template_id = message.get("template_id")
+    
+    # Get template content using template service
+    from app.services.template_service import TemplateService
+    template_content = await TemplateService.get_template_content(db, template_id)
+    template_html = template_content["html"]
+    template_css = template_content["css"]
+    template_js = template_content["js"]
+    
+    # Set all user's projects to inactive
+    result = await db.execute(
+        select(Website).where(Website.user_id == user.id)
+    )
+    user_projects = result.scalars().all()
+    
+    for p in user_projects:
+        p.is_active = False
+    
+    # First project should be public by default
+    is_first_project = len(user_projects) == 0
+    
+    # Create new project
+    new_project = Website(
+        user_id=user.id,
+        name=project_name,
+        html=template_html,
+        css=template_css,
+        js=template_js,
+        is_active=True,
+        is_public=is_first_project
+    )
+    
+    db.add(new_project)
+    await db.commit()
+    await db.refresh(new_project)
+    
+    # Create initial code history
+    from app.models import CodeHistory, ChangeType
+    history = CodeHistory(
+        website_id=new_project.id,
+        html=new_project.html,
+        css=new_project.css,
+        js=new_project.js,
+        change_type=ChangeType.MANUAL
+    )
+    db.add(history)
+    await db.commit()
+    
+    # Send project creation confirmation
+    await manager.send_personal_message({
+        "type": "project_created",
+        "project": {
+            "id": new_project.id,
+            "name": new_project.name,
+            "slug": new_project.slug,
+            "is_active": new_project.is_active,
+            "is_public": new_project.is_public,
+            "is_collaborative": new_project.is_collaborative,
+            "updated_at": new_project.updated_at.isoformat()
+        },
+        "code": {
+            "html": new_project.html,
+            "css": new_project.css,
+            "js": new_project.js
+        }
+    }, user.id)
+
+
+async def handle_toggle_project_public(
+    message: dict,
+    user: User,
+    db: AsyncSession
+):
+    """Handle toggling project public/private status"""
+    project_id = message.get("project_id")
+    
+    if not project_id:
+        await manager.send_personal_message({
+            "type": "error",
+            "message": "Projekt ID fehlt"
+        }, user.id)
+        return
+    
+    # Verify project belongs to user
+    result = await db.execute(
+        select(Website)
+        .where(Website.id == project_id)
+        .where(Website.user_id == user.id)
+    )
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        await manager.send_personal_message({
+            "type": "error",
+            "message": "Projekt nicht gefunden"
+        }, user.id)
+        return
+    
+    # Toggle public status
+    project.is_public = not project.is_public
+    
+    await db.commit()
+    
+    # Send update confirmation
+    await manager.send_personal_message({
+        "type": "project_visibility_updated",
+        "project_id": project.id,
+        "is_public": project.is_public,
+        "message": f"Projekt ist jetzt {'öffentlich' if project.is_public else 'privat'}"
+    }, user.id)
+    
+    # If made public, update gallery for all workshop participants
+    if project.is_public:
+        await gallery_manager.queue_update(
+            user.id,
+            {
+                "html": project.html,
+                "css": project.css,
+                "js": project.js,
+                "name": project.name,
+                "username": user.username,
+                "updated_at": project.updated_at.isoformat()
+            },
+            user.workshop_id
+        )

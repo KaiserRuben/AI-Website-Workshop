@@ -12,36 +12,35 @@ class CodeProcessor:
     # Dangerous patterns to block
     DANGEROUS_PATTERNS = {
         'js': [
+            # Only block truly dangerous patterns for educational workshop
             r'eval\s*\(',
-            r'Function\s*\(',
-            r'setTimeout\s*\([^,]+,\s*[^0-9]',  # Dynamic setTimeout
-            r'setInterval\s*\([^,]+,\s*[^0-9]', # Dynamic setInterval
+            r'\bFunction\s*\(',  # Block Function constructor (capital F)
             r'document\.write',
-            r'innerHTML\s*=',
-            r'outerHTML\s*=',
-            r'\.cookie',
-            r'localStorage',
-            r'sessionStorage',
-            r'indexedDB',
-            r'fetch\s*\(',
-            r'XMLHttpRequest',
-            r'WebSocket',
-            r'Worker\s*\(',
-            r'importScripts',
-            r'window\.location',
-            r'document\.location',
-            r'window\.open',
-            r'<script[^>]*src=',  # External scripts
+            # r'innerHTML\s*=',  # Allow for DOM learning
+            # r'outerHTML\s*=',  # Allow for DOM learning
+            r'\.cookie',  # Still block cookie access
+            # r'localStorage',  # Allow for data persistence learning
+            # r'sessionStorage',  # Allow for session learning
+            # r'indexedDB',  # Allow for database learning
+            # r'fetch\s*\(',  # Allow for API learning
+            # r'XMLHttpRequest',  # Allow for AJAX learning
+            # r'WebSocket',  # Allow for WebSocket learning
+            r'Worker\s*\(',  # Block workers (complexity)
+            r'importScripts',  # Block dynamic imports
+            r'window\.location\s*=',  # Block navigation hijacking
+            r'document\.location\s*=',  # Block navigation hijacking
+            r'window\.open',  # Block popups
+            r'<script[^>]*src=',  # External scripts still blocked
         ],
         'html': [
-            r'<script[^>]*src=',  # External scripts
+            r'<script[^>]*src=',  # External scripts still blocked
             r'<link[^>]*href=["\'](?!https://(?:unpkg\.com|cdnjs\.cloudflare\.com|jsdelivr\.net))',  # Non-whitelisted external styles
-            r'<iframe',
-            r'<embed',
-            r'<object',
-            r'<applet',
-            r'<form[^>]*action=',
-            r'on\w+\s*=',  # Inline event handlers
+            r'<iframe',  # Still block iframes
+            r'<embed',  # Still block embeds
+            r'<object',  # Still block objects
+            r'<applet',  # Still block applets
+            r'<form[^>]*action=',  # Still block forms with actions
+            # r'on\w+\s*=',  # Allow inline event handlers for learning
         ],
         'css': [
             r'@import\s+["\'](?!https://(?:fonts\.googleapis\.com|unpkg\.com|cdnjs\.cloudflare\.com))',
@@ -132,19 +131,22 @@ class CodeProcessor:
         errors = []
         
         for pattern in cls.DANGEROUS_PATTERNS['js']:
-            if re.search(pattern, js, re.IGNORECASE):
+            # Use case-sensitive matching for Function constructor to avoid matching "function"
+            flags = 0 if pattern == r'\bFunction\s*\(' else re.IGNORECASE
+            if re.search(pattern, js, flags):
                 errors.append(f"Unsicheres JavaScript-Muster gefunden: {pattern}")
         
         return errors
     
     @classmethod
-    def apply_updates(cls, current_code: Dict[str, str], updates: List[Dict]) -> Dict[str, str]:
+    def apply_updates(cls, current_code: Dict[str, str], updates: List[Dict], apply_all: bool = False) -> Dict[str, str]:
         """
         Apply code updates to current code
         
         Args:
             current_code: Current code dict with html, css, js
             updates: List of update operations
+            apply_all: If True, replace all occurrences. If False, replace only first occurrence.
             
         Returns:
             Updated code dict
@@ -157,8 +159,14 @@ class CodeProcessor:
             new_str = update.get('new_str', '')
             
             if file_type in new_code and old_str in new_code[file_type]:
-                new_code[file_type] = new_code[file_type].replace(old_str, new_str)
-                logger.info(f"Applied update to {file_type}: {update.get('description', 'No description')}")
+                if apply_all:
+                    # Replace all occurrences
+                    new_code[file_type] = new_code[file_type].replace(old_str, new_str)
+                    logger.info(f"Applied update_all to {file_type}: {update.get('description', 'No description')} (all occurrences)")
+                else:
+                    # Replace only first occurrence
+                    new_code[file_type] = new_code[file_type].replace(old_str, new_str, 1)
+                    logger.info(f"Applied update to {file_type}: {update.get('description', 'No description')} (first occurrence)")
             else:
                 logger.warning(f"Could not apply update to {file_type}: string not found.")
                 logger.warning(f"Looking for: '{old_str}'")

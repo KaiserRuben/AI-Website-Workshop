@@ -8,6 +8,7 @@ import enum
 class ResponseType(str, enum.Enum):
     CHAT = "chat"
     UPDATE = "update"
+    UPDATE_ALL = "update_all"
     REWRITE = "rewrite"
 
 
@@ -43,7 +44,7 @@ class LLMCall(Base):
     parent_call = relationship("LLMCall", remote_side=[id])
     
     __table_args__ = (
-        CheckConstraint("response_type IN ('chat', 'update', 'rewrite')", name='llm_calls_response_type_check'),
+        CheckConstraint("response_type IN ('chat', 'update', 'update_all', 'rewrite')", name='llm_calls_response_type_check'),
     )
 
 

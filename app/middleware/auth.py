@@ -28,7 +28,9 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     
     # Path prefixes that don't require authentication
     EXCLUDED_PREFIXES: Set[str] = {
-        "/static/"
+        "/static/",
+        "/u/",  # Public user/project URLs
+        "/p/"   # Public project short URLs
     }
     
     # Routes that require authentication but should redirect instead of returning 401

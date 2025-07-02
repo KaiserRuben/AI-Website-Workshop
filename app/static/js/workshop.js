@@ -1,4 +1,6 @@
 // SkillSpace Workshop Application
+const MAX_IMAGES_PER_USER = 50;
+
 function workshopApp() {
     return {
         // User & Session
@@ -23,6 +25,7 @@ function workshopApp() {
         showGallery: false,
         showAchievement: false,
         showAllActions: false,
+        showCreateProject: false,
         previewDevice: 'desktop',
 
         // Chat State
@@ -60,6 +63,23 @@ function workshopApp() {
         // Achievements
         currentAchievement: {},
         unlockedAchievements: [],
+
+        // Projects
+        projects: [],
+        currentProject: {},
+        projectTemplates: [],
+        newProject: {
+            name: '',
+            template_id: 0,
+            is_public: false
+        },
+
+        // Images
+        images: [],
+        showImageLibrary: false,
+        imageUploadProgress: 0,
+        isUploading: false,
+        dragOver: false,
 
         // Quick Actions with improved prompts
         quickActions: [
@@ -168,6 +188,7 @@ function workshopApp() {
                 await this.loadUserInfo();
                 await this.loadSavedState();
                 await this.initWebSocket();
+                // Images will be loaded after WebSocket connection confirms project data
                 this.startAutoSave();
 
                 // Set up global keyboard shortcuts
@@ -208,6 +229,97 @@ function workshopApp() {
             if (savedAchievements) {
                 this.unlockedAchievements = JSON.parse(savedAchievements);
             }
+
+            // Load project templates
+            await this.loadProjectTemplates();
+        },
+
+        async loadProjectTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                if (response.ok) {
+                    this.projectTemplates = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+            }
+        },
+
+        // Project Management Methods
+        openCreateProjectModal() {
+            // First project should be public by default
+            const isFirstProject = this.projects.length === 0;
+            
+            this.newProject = {
+                name: '',
+                template_id: 0,
+                is_public: isFirstProject
+            };
+            this.showCreateProject = true;
+        },
+
+        async createProject() {
+            if (!this.newProject.name.trim()) return;
+
+            try {
+                const response = await fetch('/api/websites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: this.newProject.name,
+                        template_id: this.newProject.template_id,
+                        is_public: this.newProject.is_public
+                    })
+                });
+
+                if (response.ok) {
+                    const project = await response.json();
+                    this.projects.unshift(project);
+                    this.switchProject(project.id);
+                    this.showCreateProject = false;
+                    this.showNotification('Projekt erfolgreich erstellt!', 'success');
+                } else {
+                    throw new Error('Failed to create project');
+                }
+            } catch (error) {
+                console.error('Create project error:', error);
+                this.showNotification('Fehler beim Erstellen des Projekts', 'error');
+            }
+        },
+
+        switchProject(projectId) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'switch_project',
+                    project_id: projectId
+                }));
+            }
+        },
+
+        toggleProjectPublic(projectId) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'toggle_project_public',
+                    project_id: projectId
+                }));
+            }
+        },
+
+        formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'gerade eben';
+            if (diffMins < 60) return `vor ${diffMins}m`;
+            if (diffHours < 24) return `vor ${diffHours}h`;
+            if (diffDays < 7) return `vor ${diffDays}d`;
+            return date.toLocaleDateString('de-DE');
         },
 
 
@@ -264,6 +376,15 @@ function workshopApp() {
                 case 'pong':
                     break;
 
+                case 'connection_status':
+                    if (message.status === 'connected') {
+                        this.projects = message.projects || [];
+                        this.currentProject = this.projects.find(p => p.is_active) || {};
+                        // Now that we have project data, load images for the active project
+                        this.loadImages();
+                    }
+                    break;
+
                 case 'chat_message':
                     this.addMessage(message.role, message.content);
                     this.isAiThinking = false;
@@ -276,12 +397,59 @@ function workshopApp() {
 
                 case 'code_update':
                     // Only update if this is a sync message (from server) or if code differs
-                    if (message.sync) {
+                    if (message.sync || message.project_id === this.currentProject.id) {
                         console.log('Syncing code from server...');
                         this.code = message.code;
                         this.refreshPreview();
                         this.lastSaved = this.formatTime(new Date());
                     }
+                    break;
+
+                case 'project_switched':
+                    const switchedProject = this.projects.find(p => p.id === message.project_id);
+                    if (switchedProject) {
+                        // Update active status
+                        this.projects.forEach(p => p.is_active = false);
+                        switchedProject.is_active = true;
+                        this.currentProject = switchedProject;
+                        
+                        // Update code
+                        this.code = message.code;
+                        this.refreshPreview();
+                        this.lastSaved = this.formatTime(new Date());
+                        
+                        // Reload images for the new project
+                        this.loadImages();
+                        
+                        this.showNotification(`Zu Projekt "${message.project_name}" gewechselt`, 'success');
+                    }
+                    break;
+
+                case 'project_created':
+                    this.projects.unshift(message.project);
+                    // Update active status
+                    this.projects.forEach(p => p.is_active = false);
+                    message.project.is_active = true;
+                    this.currentProject = message.project;
+                    
+                    // Update code
+                    this.code = message.code;
+                    this.refreshPreview();
+                    this.lastSaved = this.formatTime(new Date());
+                    
+                    // Reload images for the new project
+                    this.loadImages();
+                    break;
+
+                case 'project_visibility_updated':
+                    const updatedProject = this.projects.find(p => p.id === message.project_id);
+                    if (updatedProject) {
+                        updatedProject.is_public = message.is_public;
+                        if (this.currentProject.id === message.project_id) {
+                            this.currentProject.is_public = message.is_public;
+                        }
+                    }
+                    this.showNotification(message.message, 'success');
                     break;
 
                 case 'cost_update':
@@ -303,6 +471,18 @@ function workshopApp() {
 
                 case 'gallery_batch_update':
                     this.processGalleryUpdates(message.updates);
+                    break;
+
+                case 'image_uploaded':
+                    // Handle image upload notification
+                    this.images.unshift(message.image);
+                    this.showNotification('Bild erfolgreich hochgeladen!', 'success');
+                    break;
+
+                case 'image_deleted':
+                    // Handle image deletion notification
+                    this.images = this.images.filter(img => img.id !== message.image_id);
+                    this.showNotification('Bild gelöscht', 'success');
                     break;
             }
         },
@@ -326,7 +506,8 @@ function workshopApp() {
             this.sendWebSocketMessage({
                 type: 'ai_request',
                 prompt: message,
-                currentCode: this.code
+                currentCode: this.code,
+                project_id: this.currentProject.id
             });
 
             // Check for achievements
@@ -443,7 +624,8 @@ function workshopApp() {
             console.log('Saving code via WebSocket...');
             this.sendWebSocketMessage({
                 type: 'code_update',
-                code: this.code
+                code: this.code,
+                project_id: this.currentProject.id
             });
             this.lastSaved = this.formatTime(new Date());
             
@@ -702,6 +884,144 @@ function workshopApp() {
                 await fetch('/api/logout', { method: 'POST' });
                 window.location.href = '/';
             }
+        },
+
+        // Image Functions
+        async loadImages() {
+            try {
+                // Skip loading if no current project is available
+                if (!this.currentProject || !this.currentProject.id) {
+                    console.log('No active project, skipping image loading');
+                    this.images = [];
+                    return;
+                }
+                
+                const response = await fetch(`/api/images/?website_id=${this.currentProject.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.images = data.images || [];
+                    console.log('Loaded images for project', this.currentProject.id, ':', this.images.length);
+                } else {
+                    console.error('Failed to load images:', response.statusText);
+                    this.images = [];
+                }
+            } catch (error) {
+                console.error('Error loading images:', error);
+                this.images = [];
+            }
+        },
+
+        async uploadImage(file) {
+            if (!this.currentProject.id) {
+                this.showNotification('Bitte wähle zuerst ein Projekt aus', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('website_id', this.currentProject.id);
+            formData.append('alt_text', `Uploaded image: ${file.name}`);
+
+            this.isUploading = true;
+            this.imageUploadProgress = 0;
+
+            try {
+                const response = await fetch('/api/images/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.showNotification('Bild erfolgreich hochgeladen!', 'success');
+                    
+                    // Add to images list
+                    this.images.unshift(data.image);
+                    
+                    // Ask AI about image placement
+                    this.currentMessage = `Ich habe ein Bild hochgeladen: ${file.name}. Wo und wie soll ich es auf meiner Website verwenden?`;
+                    this.sendMessage();
+                } else {
+                    const error = await response.json();
+                    this.showNotification(error.detail || 'Fehler beim Hochladen', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                this.showNotification('Fehler beim Hochladen des Bildes', 'error');
+            } finally {
+                this.isUploading = false;
+                this.imageUploadProgress = 0;
+            }
+        },
+
+        handleImageDrop(event) {
+            event.preventDefault();
+            this.dragOver = false;
+
+            const files = Array.from(event.dataTransfer.files);
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+            if (imageFiles.length === 0) {
+                this.showNotification('Bitte nur Bilddateien hochladen', 'error');
+                return;
+            }
+
+            // Upload first image (or could loop for multiple)
+            if (imageFiles[0]) {
+                this.uploadImage(imageFiles[0]);
+            }
+        },
+
+        handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.uploadImage(file);
+            }
+            // Reset input
+            event.target.value = '';
+        },
+
+        insertImageIntoCode(image) {
+            const imageUrl = `/api/images/public/${image.id}/data`;
+            const imageHtml = `<img src="${imageUrl}" alt="${image.alt_text || image.original_name}" class="w-full h-auto rounded-lg shadow-lg">`;
+            
+            // Insert at current cursor position or append to HTML
+            const currentHtml = this.code.html;
+            this.code.html = currentHtml + '\n' + imageHtml;
+            
+            // Save the updated code to the server
+            this.saveCode();
+            
+            this.showNotification('Bild in Code eingefügt!', 'success');
+            this.showImageLibrary = false;
+        },
+
+        async deleteImage(imageId) {
+            if (!confirm('Bild wirklich löschen?')) return;
+
+            try {
+                const response = await fetch(`/api/images/${imageId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    this.images = this.images.filter(img => img.id !== imageId);
+                    this.showNotification('Bild gelöscht', 'success');
+                } else {
+                    this.showNotification('Fehler beim Löschen', 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                this.showNotification('Fehler beim Löschen des Bildes', 'error');
+            }
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
     };
 }

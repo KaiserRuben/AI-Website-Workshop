@@ -142,10 +142,8 @@ async def get_templates(
     db: AsyncSession = Depends(get_db)
 ):
     """Get available templates"""
-    result = await db.execute(
-        select(Template).where(Template.is_active == True)
-    )
-    templates = result.scalars().all()
+    from app.services.template_service import TemplateService
+    templates = await TemplateService.list_templates(db)
     
     return [
         TemplateResponse(
@@ -166,6 +164,7 @@ class GalleryProject(BaseModel):
     user_id: int
     username: str
     name: Optional[str]
+    slug: Optional[str]
     html: str
     css: str
     js: str
@@ -193,7 +192,7 @@ async def get_gallery(
     """Get all projects for gallery view"""
     current_user = get_current_user_from_state(request)
     
-    # Get all websites with user info and like counts
+    # Get all PUBLIC websites with user info and like counts
     result = await db.execute(
         select(
             Website,
@@ -204,6 +203,8 @@ async def get_gallery(
         .outerjoin(WebsiteLike, WebsiteLike.website_id == Website.id)
         .where(Website.html.isnot(None))
         .where(Website.html != "")
+        .where(Website.is_public == True)
+        .where(Website.is_deployed == True)
         .group_by(Website.id, User.id)
     )
     
@@ -225,6 +226,7 @@ async def get_gallery(
             user_id=user.id,
             username=user.username,
             name=website.name or f"{user.username}'s Website",
+            slug=website.slug,
             html=website.html or "",
             css=website.css or "",
             js=website.js or "",

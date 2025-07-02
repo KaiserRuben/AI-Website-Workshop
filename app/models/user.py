@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, UniqueConstraint, CheckConstraint, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, UniqueConstraint, CheckConstraint, Enum, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -26,6 +26,8 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.PARTICIPANT)
     joined_at = Column(DateTime, server_default=func.now())
     last_seen = Column(DateTime, server_default=func.now())
+    image_count = Column(Integer, default=0)
+    learned_concepts = Column(JSON, default=list)
     
     def set_password(self, password: str):
         """Hash and set password"""
@@ -41,6 +43,9 @@ class User(Base):
     llm_calls = relationship("LLMCall", back_populates="user", cascade="all, delete-orphan")
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
     liked_websites = relationship("WebsiteLike", back_populates="user", cascade="all, delete-orphan")
+    website_collaborations = relationship("WebsiteCollaborator", back_populates="user", cascade="all, delete-orphan")
+    website_comments = relationship("WebsiteComment", back_populates="user", cascade="all, delete-orphan")
+    images = relationship("UserImage", back_populates="user", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint("workshop_id", "username"),

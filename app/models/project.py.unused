@@ -1,0 +1,214 @@
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Enum, DateTime, ARRAY, UniqueConstraint
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from app.database import Base
+import enum
+
+
+class ChangeType(str, enum.Enum):
+    MANUAL = "manual"
+    AI_UPDATE = "ai_update"
+    AI_REWRITE = "ai_rewrite"
+    ROLLBACK = "rollback"
+    FORK = "fork"
+    MERGE = "merge"
+
+
+class PermissionLevel(str, enum.Enum):
+    VIEW = "view"
+    COMMENT = "comment"
+    EDIT = "edit"
+    ADMIN = "admin"
+
+
+class ActivityType(str, enum.Enum):
+    PROJECT_CREATED = "project_created"
+    VERSION_CREATED = "version_created"
+    COLLABORATOR_ADDED = "collaborator_added"
+    COMMENT_ADDED = "comment_added"
+    PROJECT_LIKED = "project_liked"
+    PROJECT_FORKED = "project_forked"
+    SHARE_CREATED = "share_created"
+    PROJECT_MADE_PUBLIC = "project_made_public"
+
+
+class Project(Base):
+    __tablename__ = "projects"
+    
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    name = Column(String(255), nullable=False, default="Neues Projekt")
+    description = Column(Text)
+    slug = Column(String(255))
+    is_public = Column(Boolean, default=False)
+    is_collaborative = Column(Boolean, default=False)
+    allow_comments = Column(Boolean, default=True)
+    allow_forks = Column(Boolean, default=True)
+    tags = Column(ARRAY(Text), default=list)
+    thumbnail_url = Column(Text)
+    has_images = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    owner = relationship("User", back_populates="owned_projects", foreign_keys=[owner_id])
+    versions = relationship("ProjectVersion", back_populates="project", cascade="all, delete-orphan")
+    collaborators = relationship("ProjectCollaborator", back_populates="project", cascade="all, delete-orphan")
+    shares = relationship("ProjectShare", back_populates="project", cascade="all, delete-orphan")
+    comments = relationship("ProjectComment", back_populates="project", cascade="all, delete-orphan")
+    likes = relationship("ProjectLike", back_populates="project", cascade="all, delete-orphan")
+    llm_calls = relationship("LLMCall", back_populates="project", cascade="all, delete-orphan")
+    chat_messages = relationship("ChatMessage", back_populates="project", cascade="all, delete-orphan")
+    activities = relationship("ProjectActivity", back_populates="project", cascade="all, delete-orphan")
+    images = relationship("UserImage", back_populates="project", cascade="all, delete-orphan")
+    
+    # Fork relationships
+    source_forks = relationship("ProjectFork", foreign_keys="ProjectFork.source_project_id", back_populates="source_project")
+    fork_of = relationship("ProjectFork", foreign_keys="ProjectFork.fork_project_id", back_populates="fork_project", uselist=False)
+    
+    __table_args__ = (
+        UniqueConstraint("owner_id", "slug"),
+    )
+    
+    @property
+    def current_version(self):
+        """Get the current version of the project"""
+        return next((v for v in self.versions if v.is_current), None)
+
+
+class ProjectVersion(Base):
+    __tablename__ = "project_versions"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    version_number = Column(Integer, nullable=False)
+    title = Column(String(255))
+    html = Column(Text, nullable=False)
+    css = Column(Text, nullable=False)
+    js = Column(Text, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    change_type = Column(Enum(ChangeType))
+    change_description = Column(Text)
+    is_current = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    project = relationship("Project", back_populates="versions")
+    creator = relationship("User", foreign_keys=[created_by])
+    llm_calls = relationship("LLMCall", back_populates="project_version")
+    
+    __table_args__ = (
+        UniqueConstraint("project_id", "version_number"),
+    )
+
+
+class ProjectCollaborator(Base):
+    __tablename__ = "project_collaborators"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    permission_level = Column(Enum(PermissionLevel))
+    invited_by = Column(Integer, ForeignKey("users.id"))
+    accepted = Column(Boolean, default=False)
+    invited_at = Column(DateTime, server_default=func.now())
+    accepted_at = Column(DateTime)
+    
+    # Relationships
+    project = relationship("Project", back_populates="collaborators")
+    user = relationship("User", foreign_keys=[user_id], back_populates="project_collaborations")
+    inviter = relationship("User", foreign_keys=[invited_by])
+    
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id"),
+    )
+
+
+class ProjectShare(Base):
+    __tablename__ = "project_shares"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    share_token = Column(String(255), unique=True, server_default=func.gen_random_uuid())
+    created_by = Column(Integer, ForeignKey("users.id"))
+    permission_level = Column(Enum(PermissionLevel))
+    expires_at = Column(DateTime)
+    max_uses = Column(Integer)
+    use_count = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    project = relationship("Project", back_populates="shares")
+    creator = relationship("User", foreign_keys=[created_by])
+
+
+class ProjectComment(Base):
+    __tablename__ = "project_comments"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    parent_comment_id = Column(Integer, ForeignKey("project_comments.id", ondelete="CASCADE"))
+    content = Column(Text, nullable=False)
+    is_edited = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    project = relationship("Project", back_populates="comments")
+    user = relationship("User", back_populates="project_comments")
+    parent_comment = relationship("ProjectComment", remote_side=[id])
+    replies = relationship("ProjectComment", back_populates="parent_comment", cascade="all, delete-orphan")
+
+
+class ProjectLike(Base):
+    __tablename__ = "project_likes"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    project = relationship("Project", back_populates="likes")
+    user = relationship("User", back_populates="liked_projects")
+    
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id"),
+    )
+
+
+class ProjectFork(Base):
+    __tablename__ = "project_forks"
+    
+    id = Column(Integer, primary_key=True)
+    source_project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"))
+    fork_project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    forked_version_id = Column(Integer, ForeignKey("project_versions.id"))
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    source_project = relationship("Project", foreign_keys=[source_project_id], back_populates="source_forks")
+    fork_project = relationship("Project", foreign_keys=[fork_project_id], back_populates="fork_of")
+    forked_version = relationship("ProjectVersion", foreign_keys=[forked_version_id])
+    
+    __table_args__ = (
+        UniqueConstraint("fork_project_id"),
+    )
+
+
+class ProjectActivity(Base):
+    __tablename__ = "project_activities"
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    activity_type = Column(Enum(ActivityType))
+    activity_data = Column(Text)  # JSONB in PostgreSQL
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    project = relationship("Project", back_populates="activities")
+    user = relationship("User", back_populates="project_activities")
