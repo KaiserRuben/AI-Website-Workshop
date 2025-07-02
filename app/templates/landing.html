@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block title %}SkillSpace - Lernpfad{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    [x-cloak] { display: none !important; }
+    
+    /* Learning path progressbar */
+    .progress-line {
+        background: linear-gradient(to right, #10b981 var(--progress), #e5e7eb var(--progress));
+    }
+    
+    /* Template cards */
+    .template-card {
+        transition: all 0.3s ease;
+    }
+    
+    .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Recent projects scroll */
+    .recent-projects-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f7fafc;
+    }
+    
+    .recent-projects-scroll::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .recent-projects-scroll::-webkit-scrollbar-track {
+        background: #f7fafc;
+        border-radius: 3px;
+    }
+    
+    .recent-projects-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+    }
+    
+    .recent-projects-scroll::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50" x-data="landingApp()" x-init="init()">
+    
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">SkillSpace</h1>
+                </div>
+                
+                <!-- Navigation -->
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="/workshop" class="text-gray-600 hover:text-purple-600 transition">Workshop</a>
+                    <a href="/gallery" class="text-gray-600 hover:text-purple-600 transition">Galerie</a>
+                    <button @click="showProgress = !showProgress" class="text-gray-600 hover:text-purple-600 transition">
+                        Mein Fortschritt
+                    </button>
+                </nav>
+                
+                <!-- User menu -->
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Hallo, <span class="font-semibold text-purple-600" x-text="username"></span>!</span>
+                    <button @click="logout()" class="text-sm text-gray-500 hover:text-red-500 transition">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Progress Modal -->
+    <div x-show="showProgress" x-transition class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showProgress = false">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">Dein Lernfortschritt</h3>
+                <button @click="showProgress = false" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Overall Progress -->
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Gesamt-Fortschritt</span>
+                        <span class="text-sm font-bold text-purple-600" x-text="Math.round(overallProgress) + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full transition-all duration-500" 
+                             :style="'width: ' + overallProgress + '%'"></div>
+                    </div>
+                </div>
+                
+                <!-- Template Progress -->
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Template-Fortschritt</h4>
+                    <div class="space-y-3">
+                        <template x-for="category in Object.keys(templateProgress)" :key="category">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm font-medium capitalize" x-text="getCategoryName(category)"></span>
+                                    <span class="text-sm text-gray-600" x-text="templateProgress[category].completed + '/' + templateProgress[category].total"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                                         :style="'width: ' + (templateProgress[category].completed / templateProgress[category].total * 100) + '%'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Hero Section -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                Dein <span class="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Lernpfad</span>
+            </h1>
+            <p class="text-xl text-gray-600 mb-8">Von den ersten Schritten zum Web-Profi - mit KI als Lernpartner</p>
+            
+            <!-- Learning Path Overview -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 max-w-4xl mx-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">🎯 Ultimativer Lernpfad</h2>
+                    <div class="text-sm text-gray-600">
+                        <span x-text="completedTemplates"></span> / <span x-text="totalTemplates"></span> abgeschlossen
+                    </div>
+                </div>
+                
+                <!-- Progress Line -->
+                <div class="relative mb-8">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full h-2 bg-gray-200 rounded-full">
+                            <div class="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full transition-all duration-1000"
+                                 :style="'width: ' + overallProgress + '%'"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Phase markers -->
+                    <div class="relative flex justify-between">
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold mb-2">1</div>
+                            <span class="text-xs font-medium text-gray-600">Foundation</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full" :class="overallProgress >= 30 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" class="flex items-center justify-center text-sm font-bold mb-2">2</div>
+                            <span class="text-xs font-medium text-gray-600">Praxis</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full" :class="overallProgress >= 70 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" class="flex items-center justify-center text-sm font-bold mb-2">3</div>
+                            <span class="text-xs font-medium text-gray-600">Mastery</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Projects Section -->
+        <section class="mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">🔥 Was andere gerade bauen</h2>
+                <a href="/gallery" class="text-purple-600 hover:text-purple-700 font-medium">Alle ansehen →</a>
+            </div>
+            
+            <div class="recent-projects-scroll overflow-x-auto pb-4">
+                <div class="flex space-x-4 min-w-max">
+                    <template x-for="project in recentProjects" :key="project.id">
+                        <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition w-80 flex-shrink-0">
+                            <!-- Project Preview -->
+                            <div class="h-48 bg-gray-100 rounded-t-xl overflow-hidden">
+                                <iframe 
+                                    :srcdoc="project.html + '<style>' + project.css + '</style>'"
+                                    class="w-full h-full border-0 pointer-events-none scale-50 origin-top-left"
+                                    style="width: 200%; height: 200%;"
+                                    sandbox="allow-scripts">
+                                </iframe>
+                            </div>
+                            
+                            <!-- Project Info -->
+                            <div class="p-4">
+                                <h3 class="font-semibold text-gray-900 mb-1" x-text="project.name"></h3>
+                                <p class="text-sm text-gray-600 mb-2">von <span x-text="project.user.display_name || project.user.username"></span></p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-500" x-text="formatDate(project.updated_at)"></span>
+                                    <div class="flex space-x-2">
+                                        <span x-show="project.is_deployed" class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                            🌐 Live
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </section>
+
+        <!-- Template Categories -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">📚 Wähle deinen nächsten Schritt</h2>
+            
+            <!-- Category Tabs -->
+            <div class="mb-8">
+                <div class="flex flex-wrap gap-2 border-b border-gray-200">
+                    <template x-for="category in Object.keys(templatesByCategory)" :key="category">
+                        <button 
+                            @click="activeCategory = category"
+                            class="px-4 py-2 font-medium text-sm rounded-t-lg transition"
+                            :class="activeCategory === category 
+                                ? 'bg-purple-100 text-purple-700 border-b-2 border-purple-600' 
+                                : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'"
+                            x-text="getCategoryName(category)">
+                        </button>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Template Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="template in templatesByCategory[activeCategory] || []" :key="template.id">
+                    <div class="template-card bg-white rounded-xl shadow-md p-6 cursor-pointer border-2 border-transparent hover:border-purple-200"
+                         @click="startTemplate(template)">
+                        
+                        <!-- Template Header -->
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg text-gray-900 mb-2" x-text="template.name"></h3>
+                                <p class="text-gray-600 text-sm" x-text="template.description"></p>
+                            </div>
+                            <div class="flex flex-col items-end space-y-1 ml-4">
+                                <div class="flex items-center space-x-1">
+                                    <template x-for="i in template.level" :key="i">
+                                        <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                    </template>
+                                    <template x-for="i in (5 - template.level)" :key="'empty-' + i">
+                                        <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+                                    </template>
+                                </div>
+                                <span class="text-xs text-gray-500" x-text="template.duration"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Template Status -->
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs"
+                                      :class="isTemplateCompleted(template.id) 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-blue-100 text-blue-800'">
+                                    <span x-show="isTemplateCompleted(template.id)">✅ Abgeschlossen</span>
+                                    <span x-show="!isTemplateCompleted(template.id)">🎯 Bereit zum Start</span>
+                                </span>
+                            </div>
+                            
+                            <div class="text-purple-600 font-semibold">
+                                <span x-show="!isTemplateCompleted(template.id)">Starten →</span>
+                                <span x-show="isTemplateCompleted(template.id)">Nochmal →</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="mb-12">
+            <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2">Bereit für Neues?</h2>
+                        <p class="text-purple-100">Starte ein freies Projekt oder entdecke die Galerie</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4 mt-6 md:mt-0">
+                        <button @click="createFreeProject()" 
+                                class="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+                            🚀 Freies Projekt
+                        </button>
+                        <a href="/gallery" 
+                           class="bg-purple-500 border-2 border-purple-400 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-400 transition text-center">
+                            🎨 Galerie erkunden
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function landingApp() {
+    return {
+        // User data
+        username: '',
+        
+        // Progress tracking
+        showProgress: false,
+        templateProgress: {},
+        overallProgress: 0,
+        completedTemplates: 0,
+        totalTemplates: 0,
+        
+        // Templates
+        templates: [],
+        templatesByCategory: {},
+        activeCategory: 'edu_speedrun',
+        
+        // Recent projects
+        recentProjects: [],
+        
+        async init() {
+            console.log('Landing app initialized');
+            await this.loadUserData();
+            await this.loadTemplates();
+            await this.loadRecentProjects();
+            this.calculateProgress();
+        },
+        
+        async loadUserData() {
+            try {
+                const response = await fetch('/api/workshop/session');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.username = data.user.display_name || data.user.username;
+                }
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+            }
+        },
+        
+        async loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                if (response.ok) {
+                    this.templates = await response.json();
+                    this.categorizeTemplates();
+                    this.totalTemplates = this.templates.length;
+                }
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+            }
+        },
+        
+        categorizeTemplates() {
+            this.templatesByCategory = {};
+            this.templates.forEach(template => {
+                const category = template.category || 'other';
+                if (!this.templatesByCategory[category]) {
+                    this.templatesByCategory[category] = [];
+                }
+                this.templatesByCategory[category].push(template);
+            });
+            
+            // Sort by order_index within categories
+            Object.keys(this.templatesByCategory).forEach(category => {
+                this.templatesByCategory[category].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+            });
+            
+            // Set default active category
+            if (Object.keys(this.templatesByCategory).length > 0) {
+                this.activeCategory = Object.keys(this.templatesByCategory)[0];
+            }
+        },
+        
+        async loadRecentProjects() {
+            try {
+                const response = await fetch('/api/recent?limit=10');
+                if (response.ok) {
+                    this.recentProjects = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to load recent projects:', error);
+            }
+        },
+        
+        calculateProgress() {
+            // Initialize progress tracking
+            this.templateProgress = {};
+            
+            Object.keys(this.templatesByCategory).forEach(category => {
+                this.templateProgress[category] = {
+                    total: this.templatesByCategory[category].length,
+                    completed: 0
+                };
+            });
+            
+            // Calculate overall progress (placeholder - would be based on user's completed templates)
+            this.overallProgress = Math.min(100, (this.completedTemplates / this.totalTemplates) * 100);
+        },
+        
+        getCategoryName(category) {
+            const names = {
+                'edu_speedrun': '⚡ Speed Run (1-2 min)',
+                'edu_gamified': '🎮 Game Theory (3-5 min)',
+                'edu_design': '🧠 Design Psychology (5-8 min)',
+                'edu_interaction': '🎯 Interaction Design (4-6 min)',
+                'edu_final': '🚀 Final Boss (∞)',
+                'learning_beginner': '👶 Anfänger (10-15 min)',
+                'learning_intermediate': '🔥 Fortgeschritten (20-30 min)',
+                'learning_advanced': '⭐ Profi (45+ min)'
+            };
+            return names[category] || category;
+        },
+        
+        isTemplateCompleted(templateId) {
+            // Placeholder - would check user's progress
+            return false;
+        },
+        
+        async startTemplate(template) {
+            try {
+                const response = await fetch('/api/websites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: `${template.name} - ${new Date().toLocaleDateString()}`,
+                        template_id: template.id,
+                        is_public: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const project = await response.json();
+                    window.location.href = `/workshop?project=${project.id}`;
+                } else {
+                    throw new Error('Failed to create project');
+                }
+            } catch (error) {
+                console.error('Failed to start template:', error);
+                alert('Fehler beim Erstellen des Projekts');
+            }
+        },
+        
+        async createFreeProject() {
+            try {
+                const projectName = prompt('Projektname:', `Mein Projekt - ${new Date().toLocaleDateString()}`);
+                if (!projectName) return;
+                
+                const response = await fetch('/api/websites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: projectName,
+                        template_id: 0, // Empty template
+                        is_public: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const project = await response.json();
+                    window.location.href = `/workshop?project=${project.id}`;
+                } else {
+                    throw new Error('Failed to create project');
+                }
+            } catch (error) {
+                console.error('Failed to create free project:', error);
+                alert('Fehler beim Erstellen des Projekts');
+            }
+        },
+        
+        formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        },
+        
+        async logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/';
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
