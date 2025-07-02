@@ -1,2893 +1,2768 @@
--- Migration: Gamified Templates
+-- Migration: Interactive Learning Templates
 -- Category: gamified
--- Purpose: Game-based learning for Gen Z developers
+-- Purpose: Interactive learning experiences for kids with AI assistance
 
 INSERT INTO templates (name, description, html, css, js, category, is_active, order_index, template_metadata) VALUES
 
--- Template 1: Speed Builder Challenge
-('⚡ Speed Builder Challenge', '60 Sekunden Website-Bau Challenge - Wie schnell bist du?',
-'<!DOCTYPE html>
+-- Template 1: Mein erstes buntes Web
+('01 - Mein erstes buntes Web', 'Lerne HTML und CSS Grundlagen - Mache das Web bunt! 🎨',
+$$<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Builder Challenge</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="bg-black text-white min-h-screen" x-data="{
-    // Game state
-    gameState: ''menu'', // menu, playing, results, leaderboard
-    timeLeft: 60,
-    score: 0,
-    combo: 0,
-    maxCombo: 0,
-    playerName: '''',
-
-    // Challenges
-    currentChallenge: null,
-    completedChallenges: [],
-    availableChallenges: [
-        {
-            id: 1,
-            task: ''🎨 Mach den Hintergrund NEON PINK!'',
-            command: ''background neon pink'',
-            points: 100,
-            difficulty: ''easy'',
-            timeBonus: 5
-        },
-        {
-            id: 2,
-            task: ''🌈 Füge einen REGENBOGEN-GRADIENT hinzu!'',
-            command: ''gradient rainbow'',
-            points: 200,
-            difficulty: ''medium'',
-            timeBonus: 7
-        },
-        {
-            id: 3,
-            task: ''💫 Lass ALLES ROTIEREN!'',
-            command: ''rotate everything'',
-            points: 150,
-            difficulty: ''easy'',
-            timeBonus: 5
-        },
-        {
-            id: 4,
-            task: ''🎪 Mach KONFETTI-REGEN!'',
-            command: ''confetti rain'',
-            points: 300,
-            difficulty: ''hard'',
-            timeBonus: 10
-        },
-        {
-            id: 5,
-            task: ''🔥 FEUER-ANIMATION überall!'',
-            command: ''fire animation'',
-            points: 250,
-            difficulty: ''medium'',
-            timeBonus: 8
-        },
-        {
-            id: 6,
-            task: ''👾 RETRO 8-BIT Style!'',
-            command: ''retro 8bit'',
-            points: 200,
-            difficulty: ''medium'',
-            timeBonus: 7
-        },
-        {
-            id: 7,
-            task: ''🌊 WELLEN-ANIMATION!'',
-            command: ''wave animation'',
-            points: 180,
-            difficulty: ''medium'',
-            timeBonus: 6
-        },
-        {
-            id: 8,
-            task: ''⚡ BLITZ-EFFEKTE!'',
-            command: ''lightning effects'',
-            points: 350,
-            difficulty: ''hard'',
-            timeBonus: 12
-        }
-    ],
-
-    // Effects
-    effects: {
-        neonPink: false,
-        rainbow: false,
-        rotating: false,
-        confetti: false,
-        fire: false,
-        retro: false,
-        waves: false,
-        lightning: false
-    },
-
-    // Sound effects (simulated)
-    soundEnabled: true,
-
-    // Leaderboard
-    leaderboard: [
-        { name: ''SpeedCoder'', score: 2850, time: ''58s'' },
-        { name: ''CSSNinja'', score: 2650, time: ''55s'' },
-        { name: ''HTMLHero'', score: 2400, time: ''60s'' },
-        { name: ''WebWizard'', score: 2200, time: ''52s'' },
-        { name: ''CodeRacer'', score: 2000, time: ''60s'' }
-    ],
-
-    // Methods
-    startGame() {
-        this.gameState = ''playing'';
-        this.timeLeft = 60;
-        this.score = 0;
-        this.combo = 0;
-        this.maxCombo = 0;
-        this.completedChallenges = [];
-        this.resetEffects();
-        this.getNewChallenge();
-        this.startTimer();
-    },
-
-    startTimer() {
-        const timer = setInterval(() => {
-            if (this.timeLeft > 0 && this.gameState === ''playing'') {
-                this.timeLeft--;
-            } else {
-                clearInterval(timer);
-                if (this.gameState === ''playing'') {
-                    this.endGame();
-                }
-            }
-        }, 1000);
-    },
-
-    getNewChallenge() {
-        const available = this.availableChallenges.filter(c =>
-            !this.completedChallenges.includes(c.id)
-        );
-
-        if (available.length === 0) {
-            // All challenges completed - restart with bonus
-            this.completedChallenges = [];
-            this.score += 500;
-            this.showNotification(''🎯 ALL CHALLENGES COMPLETED! +500 BONUS!'');
-        }
-
-        this.currentChallenge = available[Math.floor(Math.random() * available.length)];
-    },
-
-    completeChallenge(challengeId) {
-        if (this.currentChallenge && this.currentChallenge.id === challengeId) {
-            // Calculate score with combo
-            this.combo++;
-            if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-
-            const basePoints = this.currentChallenge.points;
-            const comboBonus = this.combo > 1 ? (this.combo - 1) * 50 : 0;
-            const totalPoints = basePoints + comboBonus;
-
-            this.score += totalPoints;
-            this.timeLeft += this.currentChallenge.timeBonus;
-            this.completedChallenges.push(challengeId);
-
-            // Apply effect
-            this.applyEffect(challengeId);
-
-            // Show notification
-            if (this.combo > 1) {
-                this.showNotification(`🔥 ${this.combo}x COMBO! +${totalPoints} POINTS!`);
-            } else {
-                this.showNotification(`✅ +${totalPoints} POINTS!`);
-            }
-
-            // Get next challenge
-            this.getNewChallenge();
-        }
-    },
-
-    applyEffect(challengeId) {
-        switch(challengeId) {
-            case 1: this.effects.neonPink = true; break;
-            case 2: this.effects.rainbow = true; break;
-            case 3: this.effects.rotating = true; break;
-            case 4: this.effects.confetti = true; break;
-            case 5: this.effects.fire = true; break;
-            case 6: this.effects.retro = true; break;
-            case 7: this.effects.waves = true; break;
-            case 8: this.effects.lightning = true; break;
-        }
-    },
-
-    resetEffects() {
-        Object.keys(this.effects).forEach(key => {
-            this.effects[key] = false;
-        });
-    },
-
-    showNotification(text) {
-        // This would show a notification in real implementation
-        console.log(text);
-    },
-
-    endGame() {
-        this.gameState = ''results'';
-
-        // Check if high score
-        const lowestScore = Math.min(...this.leaderboard.map(e => e.score));
-        if (this.score > lowestScore) {
-            this.showNotification(''🏆 NEW HIGH SCORE!'');
-        }
-    },
-
-    submitScore() {
-        if (this.playerName) {
-            this.leaderboard.push({
-                name: this.playerName,
-                score: this.score,
-                time: `${60 - this.timeLeft}s`
-            });
-
-            // Sort leaderboard
-            this.leaderboard.sort((a, b) => b.score - a.score);
-            this.leaderboard = this.leaderboard.slice(0, 10); // Keep top 10
-
-            this.gameState = ''leaderboard'';
-        }
-    },
-
-    get timeFormatted() {
-        const minutes = Math.floor(this.timeLeft / 60);
-        const seconds = this.timeLeft % 60;
-        return `${minutes}:${seconds.toString().padStart(2, ''0'')}`;
-    }
-}"
-:class="{
-    ''bg-pink-900'': effects.neonPink,
-    ''bg-gradient-to-br from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500'': effects.rainbow,
-    ''animate-spin-slow'': effects.rotating,
-    ''pixelated'': effects.retro
-}">
-    <!-- Menu Screen -->
-    <div x-show="gameState === ''menu''" x-transition class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-4xl mx-auto px-8">
-            <!-- Logo/Title -->
-            <div class="mb-12">
-                <h1 class="text-8xl font-bold mb-4 animate-pulse bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-                    SPEED BUILDER
-                </h1>
-                <p class="text-3xl text-pink-400">60 Second Challenge</p>
-            </div>
-
-            <!-- Instructions -->
-            <div class="bg-gray-900 rounded-3xl p-8 mb-8 backdrop-blur-lg bg-opacity-80">
-                <h2 class="text-2xl font-bold mb-6 text-yellow-400">🎮 How to Play</h2>
-                <div class="grid md:grid-cols-3 gap-6 text-left">
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">⚡</div>
-                        <h3 class="font-bold mb-2">Be Fast!</h3>
-                        <p class="text-sm text-gray-400">Complete challenges before time runs out</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">🎯</div>
-                        <h3 class="font-bold mb-2">Follow Commands</h3>
-                        <p class="text-sm text-gray-400">Tell the AI exactly what each challenge wants</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">🔥</div>
-                        <h3 class="font-bold mb-2">Build Combos</h3>
-                        <p class="text-sm text-gray-400">Chain challenges for bonus points!</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Start Button -->
-            <button @click="startGame"
-                    class="px-12 py-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full text-3xl font-bold hover:scale-110 transform transition animate-bounce">
-                START GAME! 🚀
-            </button>
-
-            <!-- Leaderboard Preview -->
-            <div class="mt-8">
-                <button @click="gameState = ''leaderboard''"
-                        class="text-yellow-400 hover:text-yellow-300 underline">
-                    View Leaderboard 🏆
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Screen -->
-    <div x-show="gameState === ''playing''" x-transition class="min-h-screen relative">
-        <!-- Game HUD -->
-        <div class="fixed top-0 left-0 right-0 bg-black bg-opacity-90 p-4 z-50">
-            <div class="max-w-6xl mx-auto flex justify-between items-center">
-                <!-- Timer -->
-                <div class="text-center">
-                    <div class="text-5xl font-bold"
-                         :class="timeLeft < 10 ? ''text-red-500 animate-pulse'' : ''text-green-400''">
-                        <span x-text="timeFormatted"></span>
-                    </div>
-                    <div class="text-sm text-gray-400">TIME</div>
-                </div>
-
-                <!-- Score -->
-                <div class="text-center">
-                    <div class="text-5xl font-bold text-yellow-400">
-                        <span x-text="score.toLocaleString()"></span>
-                    </div>
-                    <div class="text-sm text-gray-400">SCORE</div>
-                </div>
-
-                <!-- Combo -->
-                <div class="text-center">
-                    <div class="text-5xl font-bold"
-                         :class="combo > 0 ? ''text-orange-400'' : ''text-gray-600''">
-                        <span x-text="combo"></span>x
-                    </div>
-                    <div class="text-sm text-gray-400">COMBO</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Current Challenge -->
-        <div class="flex items-center justify-center min-h-screen pt-32">
-            <div class="max-w-4xl w-full mx-auto px-8">
-                <div x-show="currentChallenge"
-                     class="bg-gray-900 rounded-3xl p-12 shadow-2xl transform transition hover:scale-105">
-                    <div class="text-center">
-                        <!-- Challenge Number -->
-                        <div class="text-sm text-gray-400 mb-2">
-                            CHALLENGE #<span x-text="completedChallenges.length + 1"></span>
-                        </div>
-
-                        <!-- Challenge Task -->
-                        <h2 class="text-4xl font-bold mb-6" x-text="currentChallenge?.task"></h2>
-
-                        <!-- Points & Difficulty -->
-                        <div class="flex justify-center gap-6 mb-8">
-                            <div class="bg-gray-800 rounded-lg px-4 py-2">
-                                <span class="text-yellow-400 font-bold" x-text="currentChallenge?.points"></span> POINTS
-                            </div>
-                            <div class="bg-gray-800 rounded-lg px-4 py-2">
-                                +<span x-text="currentChallenge?.timeBonus"></span>s TIME
-                            </div>
-                            <div class="rounded-lg px-4 py-2"
-                                 :class="{
-                                     ''bg-green-800'': currentChallenge?.difficulty === ''easy'',
-                                     ''bg-yellow-800'': currentChallenge?.difficulty === ''medium'',
-                                     ''bg-red-800'': currentChallenge?.difficulty === ''hard''
-                                 }">
-                                <span x-text="currentChallenge?.difficulty?.toUpperCase()"></span>
-                            </div>
-                        </div>
-
-                        <!-- Command Hint -->
-                        <div class="bg-gray-800 rounded-xl p-4">
-                            <p class="text-sm text-gray-400 mb-2">Say to the AI:</p>
-                            <p class="text-xl font-mono text-green-400">
-                                "<span x-text="currentChallenge?.command"></span>"
-                            </p>
-                        </div>
-
-                        <!-- Action Buttons (Simulated) -->
-                        <div class="mt-8 grid grid-cols-2 gap-4">
-                            <button @click="completeChallenge(currentChallenge.id)"
-                                    class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-xl font-bold transform hover:scale-105 transition">
-                                ✅ Complete!
-                            </button>
-                            <button @click="combo = 0; getNewChallenge()"
-                                    class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl font-bold transform hover:scale-105 transition">
-                                ❌ Skip (-combo)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="mt-8">
-                    <div class="bg-gray-800 rounded-full h-4">
-                        <div class="bg-gradient-to-r from-green-400 to-blue-500 h-full rounded-full transition-all duration-300"
-                             :style="`width: ${(completedChallenges.length / availableChallenges.length) * 100}%`"></div>
-                    </div>
-                    <p class="text-center mt-2 text-gray-400">
-                        <span x-text="completedChallenges.length"></span> / <span x-text="availableChallenges.length"></span> Challenges
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Visual Effects -->
-        <div class="fixed inset-0 pointer-events-none">
-            <!-- Confetti -->
-            <div x-show="effects.confetti" class="absolute inset-0">
-                <div class="confetti-container">
-                    <div class="confetti"></div>
-                    <div class="confetti"></div>
-                    <div class="confetti"></div>
-                    <div class="confetti"></div>
-                    <div class="confetti"></div>
-                </div>
-            </div>
-
-            <!-- Fire -->
-            <div x-show="effects.fire" class="absolute bottom-0 left-0 right-0 h-32">
-                <div class="fire-effect"></div>
-            </div>
-
-            <!-- Lightning -->
-            <div x-show="effects.lightning" class="absolute inset-0">
-                <div class="lightning-flash"></div>
-            </div>
-
-            <!-- Waves -->
-            <div x-show="effects.waves" class="absolute inset-0">
-                <div class="wave-effect"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Results Screen -->
-    <div x-show="gameState === ''results''" x-transition class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <h1 class="text-6xl font-bold mb-8">🏁 TIME''S UP!</h1>
-
-            <!-- Final Score -->
-            <div class="bg-gray-900 rounded-3xl p-8 mb-8">
-                <div class="text-7xl font-bold text-yellow-400 mb-4">
-                    <span x-text="score.toLocaleString()"></span>
-                </div>
-                <p class="text-2xl text-gray-400">FINAL SCORE</p>
-            </div>
-
-            <!-- Stats -->
-            <div class="grid grid-cols-3 gap-4 mb-8">
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="text-3xl font-bold text-green-400" x-text="completedChallenges.length"></div>
-                    <div class="text-sm text-gray-400">Challenges</div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="text-3xl font-bold text-orange-400" x-text="maxCombo"></div>
-                    <div class="text-sm text-gray-400">Max Combo</div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="text-3xl font-bold text-purple-400">
-                        <span x-text="60 - timeLeft"></span>s
-                    </div>
-                    <div class="text-sm text-gray-400">Time Used</div>
-                </div>
-            </div>
-
-            <!-- Name Input -->
-            <div class="mb-8">
-                <input type="text"
-                       x-model="playerName"
-                       placeholder="Enter your name for leaderboard"
-                       class="px-6 py-3 bg-gray-800 rounded-xl text-xl w-full max-w-md"
-                       @keyup.enter="submitScore">
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-4 justify-center">
-                <button @click="submitScore"
-                        :disabled="!playerName"
-                        :class="!playerName ? ''opacity-50'' : ''hover:bg-green-700''"
-                        class="px-8 py-3 bg-green-600 rounded-xl font-bold">
-                    Submit Score 📊
-                </button>
-                <button @click="startGame"
-                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold">
-                    Play Again 🔄
-                </button>
-                <button @click="gameState = ''menu''"
-                        class="px-8 py-3 bg-gray-600 hover:bg-gray-700 rounded-xl font-bold">
-                    Main Menu 🏠
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Leaderboard Screen -->
-    <div x-show="gameState === ''leaderboard''" x-transition class="min-h-screen flex items-center justify-center">
-        <div class="max-w-4xl w-full mx-auto px-8">
-            <h1 class="text-5xl font-bold text-center mb-8">🏆 LEADERBOARD</h1>
-
-            <div class="bg-gray-900 rounded-3xl p-8">
-                <div class="space-y-4">
-                    <template x-for="(entry, index) in leaderboard" :key="index">
-                        <div class="flex items-center justify-between bg-gray-800 rounded-xl p-4"
-                             :class="{
-                                 ''bg-gradient-to-r from-yellow-600 to-yellow-800'': index === 0,
-                                 ''bg-gradient-to-r from-gray-600 to-gray-700'': index === 1,
-                                 ''bg-gradient-to-r from-orange-700 to-orange-800'': index === 2
-                             }">
-                            <div class="flex items-center gap-4">
-                                <div class="text-2xl font-bold w-12">
-                                    <span x-show="index === 0">🥇</span>
-                                    <span x-show="index === 1">🥈</span>
-                                    <span x-show="index === 2">🥉</span>
-                                    <span x-show="index > 2" x-text="index + 1"></span>
-                                </div>
-                                <div>
-                                    <div class="font-bold text-xl" x-text="entry.name"></div>
-                                    <div class="text-sm text-gray-300">
-                                        Time: <span x-text="entry.time"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-3xl font-bold text-yellow-400">
-                                <span x-text="entry.score.toLocaleString()"></span>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="text-center mt-8">
-                <button @click="gameState = ''menu''"
-                        class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold">
-                    Back to Menu
-                </button>
-            </div>
-        </div>
-    </div>
-
+    <title>Mein erstes buntes Web</title>
     <style>
-        /* Custom animations */
-        @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f0f0;
         }
 
-        .animate-spin-slow {
-            animation: spin-slow 20s linear infinite;
+        .lernbereich {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        /* Retro/Pixelated effect */
-        .pixelated {
-            image-rendering: pixelated;
-            font-family: ''Courier New'', monospace;
+        .aufgabe {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #2196f3;
         }
 
-        /* Confetti animation */
-        @keyframes confetti-fall {
-            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        .erfolg {
+            background: #c8e6c9;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
         }
 
-        .confetti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: linear-gradient(45deg, #ff0080, #ff8c00, #ffd700, #00ff00, #00ffff, #0080ff, #8000ff);
-            animation: confetti-fall 3s linear infinite;
+        .hilfe-button {
+            background: #ff9800;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
         }
 
-        .confetti:nth-child(1) { left: 10%; animation-delay: 0s; }
-        .confetti:nth-child(2) { left: 30%; animation-delay: 0.5s; }
-        .confetti:nth-child(3) { left: 50%; animation-delay: 1s; }
-        .confetti:nth-child(4) { left: 70%; animation-delay: 1.5s; }
-        .confetti:nth-child(5) { left: 90%; animation-delay: 2s; }
+        .hilfe-button:hover {
+            background: #f57c00;
+            transform: scale(1.05);
+        }
 
-        /* Fire effect */
-        .fire-effect {
+        /* Zu ändernde Elemente */
+        #mein-titel {
+            color: black; /* Aufgabe: Mache mich rot! */
+        }
+
+        #mein-text {
+            color: black; /* Aufgabe: Mache mich blau! */
+        }
+
+        #meine-box {
+            background-color: white; /* Aufgabe: Gib mir eine gelbe Hintergrundfarbe! */
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .stern {
+            font-size: 30px;
+            color: #ddd;
+            transition: color 0.3s;
+        }
+
+        .stern.aktiv {
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="lernbereich">
+        <h1>🎨 Willkommen beim bunten Web!</h1>
+
+        <div class="fortschritt">
+            <p>Dein Fortschritt:</p>
+            <span class="stern" id="stern1">⭐</span>
+            <span class="stern" id="stern2">⭐</span>
+            <span class="stern" id="stern3">⭐</span>
+        </div>
+
+        <p>Hallo! Ich bin deine erste Webseite. Lass uns gemeinsam lernen, wie man mich bunt macht!</p>
+
+        <div class="aufgabe">
+            <h3>🎯 Aufgabe 1: Mache die Überschrift rot!</h3>
+            <p>Siehst du die schwarze Überschrift unten? Die soll rot werden!</p>
+            <button class="hilfe-button" onclick="zeigeHilfe1()">
+                💡 Ich brauche Hilfe!
+            </button>
+            <p class="hilfe" id="hilfe1" style="display:none;">
+                <strong>Tipp:</strong> Frage die KI: "Wie kann ich die Überschrift mit der ID 'mein-titel' rot machen?"<br>
+                Die KI wird dir zeigen, wie du CSS verwendest! 🎨
+            </p>
+        </div>
+
+        <h2 id="mein-titel">Ich bin eine langweilige schwarze Überschrift</h2>
+
+        <div class="erfolg" id="erfolg1">
+            🎉 Super! Du hast die Überschrift rot gemacht! Stern 1 verdient! ⭐
+        </div>
+
+        <div class="aufgabe">
+            <h3>🎯 Aufgabe 2: Mache den Text blau!</h3>
+            <p>Jetzt machen wir den Text unter mir blau!</p>
+            <button class="hilfe-button" onclick="zeigeHilfe2()">
+                💡 Ich brauche Hilfe!
+            </button>
+            <p class="hilfe" id="hilfe2" style="display:none;">
+                <strong>Tipp:</strong> Frage die KI: "Wie ändere ich die Farbe vom Element mit der ID 'mein-text' zu blau?"<br>
+                CSS kann viele Farben! Probiere auch mal 'darkblue' oder '#0000FF'! 🔵
+            </p>
+        </div>
+
+        <p id="mein-text">Ich bin ein Text, der gerne blau wäre!</p>
+
+        <div class="erfolg" id="erfolg2">
+            🎉 Fantastisch! Der Text ist jetzt blau! Stern 2 verdient! ⭐⭐
+        </div>
+
+        <div class="aufgabe">
+            <h3>🎯 Aufgabe 3: Gib der Box einen gelben Hintergrund!</h3>
+            <p>Die Box unten braucht eine schöne gelbe Hintergrundfarbe!</p>
+            <button class="hilfe-button" onclick="zeigeHilfe3()">
+                💡 Ich brauche Hilfe!
+            </button>
+            <p class="hilfe" id="hilfe3" style="display:none;">
+                <strong>Tipp:</strong> Frage die KI: "Wie gebe ich der Box mit der ID 'meine-box' einen gelben Hintergrund?"<br>
+                Für Hintergründe benutzt man 'background-color'! 🟨
+            </p>
+        </div>
+
+        <div id="meine-box">
+            <h3>📦 Ich bin eine Box!</h3>
+            <p>Gib mir eine schöne gelbe Hintergrundfarbe!</p>
+        </div>
+
+        <div class="erfolg" id="erfolg3">
+            🎉 Wow! Du hast alle Aufgaben geschafft! Alle Sterne verdient! ⭐⭐⭐<br>
+            <strong>Du hast gelernt:</strong>
+            <ul>
+                <li>Wie man Farben mit CSS ändert</li>
+                <li>Was IDs sind (#mein-titel)</li>
+                <li>Den Unterschied zwischen color und background-color</li>
+            </ul>
+            <p>Bereit für das nächste Level? 🚀</p>
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+            <h3>🧪 Experimentier-Ecke</h3>
+            <p>Probiere mal diese Farben aus:</p>
+            <ul>
+                <li><code>red</code>, <code>blue</code>, <code>green</code>, <code>yellow</code></li>
+                <li><code>purple</code>, <code>orange</code>, <code>pink</code></li>
+                <li>Hex-Farben: <code>#FF0000</code> (rot), <code>#00FF00</code> (grün)</li>
+                <li>RGB: <code>rgb(255, 0, 0)</code> (rot)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Hilfe-Funktionen
+        function zeigeHilfe1() {
+            document.getElementById('hilfe1').style.display = 'block';
+        }
+
+        function zeigeHilfe2() {
+            document.getElementById('hilfe2').style.display = 'block';
+        }
+
+        function zeigeHilfe3() {
+            document.getElementById('hilfe3').style.display = 'block';
+        }
+
+        // Überprüfe Fortschritt
+        function checkeFortschritt() {
+            const titel = document.getElementById('mein-titel');
+            const text = document.getElementById('mein-text');
+            const box = document.getElementById('meine-box');
+
+            // Check Aufgabe 1
+            if (getComputedStyle(titel).color === 'rgb(255, 0, 0)' ||
+                getComputedStyle(titel).color.includes('red')) {
+                document.getElementById('erfolg1').style.display = 'block';
+                document.getElementById('stern1').classList.add('aktiv');
+            }
+
+            // Check Aufgabe 2
+            if (getComputedStyle(text).color === 'rgb(0, 0, 255)' ||
+                getComputedStyle(text).color.includes('blue')) {
+                document.getElementById('erfolg2').style.display = 'block';
+                document.getElementById('stern2').classList.add('aktiv');
+            }
+
+            // Check Aufgabe 3
+            if (getComputedStyle(box).backgroundColor === 'rgb(255, 255, 0)' ||
+                getComputedStyle(box).backgroundColor.includes('yellow')) {
+                document.getElementById('erfolg3').style.display = 'block';
+                document.getElementById('stern3').classList.add('aktiv');
+            }
+        }
+
+        // Überwache Änderungen
+        setInterval(checkeFortschritt, 500);
+    </script>
+</body>
+</html>$$, '', '', 'gamified', true, 1, '{"level": 1, "duration": "15-20 min", "skills": ["HTML Basics", "CSS Colors", "IDs"], "age": "8-12"}'),
+
+-- Template 2: Button-Fabrik
+('02 - Button-Fabrik', 'Erstelle coole Buttons mit CSS - Klick dich durchs Web! 🎯',
+$$<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button-Fabrik</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .fabrik {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .maschine {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 3px dashed #dee2e6;
+        }
+
+        .button-vorlage {
+            display: inline-block;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* Buttons zum Bearbeiten */
+        #button1 {
+            background-color: gray;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            /* Aufgabe: Mache mich rund! */
+        }
+
+        #button2 {
+            background-color: blue;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            /* Aufgabe: Gib mir einen Hover-Effekt! */
+        }
+
+        #button3 {
+            background-color: white;
+            color: black;
+            padding: 10px 20px;
+            border: 1px solid black;
+            cursor: pointer;
+            /* Aufgabe: Mache mich größer und bunter! */
+        }
+
+        .aufgaben-karte {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            border-left: 5px solid #4caf50;
+        }
+
+        .erfolg-nachricht {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            animation: einblenden 0.5s ease;
+        }
+
+        @keyframes einblenden {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .punkte-anzeige {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .hilfe-bereich {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .code-beispiel {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+
+        .werkzeugkasten {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .werkzeug {
+            display: inline-block;
+            background: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+        }
+
+        .werkzeug:hover {
+            border-color: #4caf50;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="punkte-anzeige">
+        <span id="punkte">0</span> 🏆 Punkte
+    </div>
+
+    <div class="fabrik">
+        <h1>🏭 Willkommen in der Button-Fabrik!</h1>
+        <p>Hier lernst du, wie man die coolsten Buttons des Internets baut! Jeder Button braucht deine Hilfe!</p>
+
+        <div class="aufgaben-karte">
+            <h3>🎯 Level 1: Der Runde Button</h3>
+            <p>Unser erster Button ist noch sehr eckig. Kannst du ihn rund machen?</p>
+            <button class="hilfe-button" onclick="zeigeHilfe('hilfe1')">
+                💡 Zeig mir einen Tipp!
+            </button>
+            <div class="hilfe-bereich" id="hilfe1">
+                <p><strong>Tipp:</strong> Frage die KI: "Wie mache ich Button1 mit border-radius rund?"</p>
+                <div class="code-beispiel">
+                    border-radius macht Ecken rund!<br>
+                    Probiere: border-radius: 25px;
+                </div>
+            </div>
+        </div>
+
+        <div class="maschine">
+            <h3>Button-Maschine 1</h3>
+            <button id="button1" class="button-vorlage">Mach mich rund!</button>
+            <div class="erfolg-nachricht" id="erfolg1">
+                🎉 Super! Du hast deinen ersten runden Button erstellt! +100 Punkte!
+            </div>
+        </div>
+
+        <div class="aufgaben-karte">
+            <h3>🎯 Level 2: Der Hover-Button</h3>
+            <p>Dieser Button soll sich verändern, wenn man mit der Maus drüber fährt!</p>
+            <button class="hilfe-button" onclick="zeigeHilfe('hilfe2')">
+                💡 Zeig mir einen Tipp!
+            </button>
+            <div class="hilfe-bereich" id="hilfe2">
+                <p><strong>Tipp:</strong> Frage die KI: "Wie füge ich einen Hover-Effekt zu Button2 hinzu?"</p>
+                <div class="code-beispiel">
+                    #button2:hover {<br>
+                    &nbsp;&nbsp;/* Hier kommt dein Hover-Style! */<br>
+                    }
+                </div>
+                <p>Ideen: Ändere die Farbe, mache ihn größer, oder füge einen Schatten hinzu!</p>
+            </div>
+        </div>
+
+        <div class="maschine">
+            <h3>Button-Maschine 2</h3>
+            <button id="button2" class="button-vorlage">Hover über mich!</button>
+            <div class="erfolg-nachricht" id="erfolg2">
+                🎉 Wow! Dein Button hat jetzt einen coolen Hover-Effekt! +150 Punkte!
+            </div>
+        </div>
+
+        <div class="aufgaben-karte">
+            <h3>🎯 Level 3: Der Mega-Button</h3>
+            <p>Zeit für einen richtig coolen Button! Mache ihn größer, bunter und gib ihm einen Schatten!</p>
+            <button class="hilfe-button" onclick="zeigeHilfe('hilfe3')">
+                💡 Zeig mir einen Tipp!
+            </button>
+            <div class="hilfe-bereich" id="hilfe3">
+                <p><strong>Tipp:</strong> Frage die KI nach diesen CSS-Eigenschaften:</p>
+                <ul>
+                    <li><code>padding</code> - für die Größe</li>
+                    <li><code>background</code> - für coole Farben oder Verläufe</li>
+                    <li><code>box-shadow</code> - für den Schatten</li>
+                    <li><code>font-size</code> - für größeren Text</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="maschine">
+            <h3>Button-Maschine 3</h3>
+            <button id="button3" class="button-vorlage">Mach mich MEGA!</button>
+            <div class="erfolg-nachricht" id="erfolg3">
+                🎉 MEGA! Das ist der coolste Button ever! +200 Punkte!
+                <br><br>
+                <strong>Du hast gelernt:</strong>
+                <ul>
+                    <li>✅ border-radius für runde Ecken</li>
+                    <li>✅ :hover für Maus-Effekte</li>
+                    <li>✅ padding für Größe</li>
+                    <li>✅ box-shadow für Schatten</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="werkzeugkasten">
+            <h3>🧰 Dein CSS-Werkzeugkasten</h3>
+            <p>Klicke auf ein Werkzeug, um mehr zu erfahren:</p>
+            <span class="werkzeug" onclick="erklaereWerkzeug('padding')">📏 padding</span>
+            <span class="werkzeug" onclick="erklaereWerkzeug('border-radius')">⭕ border-radius</span>
+            <span class="werkzeug" onclick="erklaereWerkzeug('background')">🎨 background</span>
+            <span class="werkzeug" onclick="erklaereWerkzeug('box-shadow')">🌑 box-shadow</span>
+            <span class="werkzeug" onclick="erklaereWerkzeug('transform')">🔄 transform</span>
+            <span class="werkzeug" onclick="erklaereWerkzeug('transition')">⏱️ transition</span>
+        </div>
+
+        <div class="maschine" style="background: #fff3cd;">
+            <h3>🎪 Bonus-Spielplatz</h3>
+            <p>Erstelle deinen eigenen Button! Frage die KI nach coolen Ideen!</p>
+            <button id="mein-button" style="padding: 15px 30px; font-size: 18px;">
+                Dein Button!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let punkte = 0;
+        let level1Fertig = false;
+        let level2Fertig = false;
+        let level3Fertig = false;
+
+        function zeigeHilfe(hilfeId) {
+            const hilfe = document.getElementById(hilfeId);
+            hilfe.style.display = hilfe.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function erklaereWerkzeug(werkzeug) {
+            const erklaerungen = {
+                'padding': 'padding macht den Button innen größer. Probiere: padding: 20px 40px;',
+                'border-radius': 'border-radius macht Ecken rund. 50% macht einen Kreis!',
+                'background': 'background kann eine Farbe oder ein Verlauf sein. Probiere: background: linear-gradient(45deg, #ff6b6b, #4ecdc4);',
+                'box-shadow': 'box-shadow macht einen Schatten. Probiere: box-shadow: 0 4px 15px rgba(0,0,0,0.2);',
+                'transform': 'transform kann Dinge drehen oder größer machen. Probiere: transform: scale(1.1);',
+                'transition': 'transition macht Änderungen smooth. Probiere: transition: all 0.3s ease;'
+            };
+
+            alert('🛠️ ' + werkzeug + '\n\n' + erklaerungen[werkzeug]);
+        }
+
+        function aktualisiertePunkte(neuePunkte) {
+            punkte += neuePunkte;
+            document.getElementById('punkte').textContent = punkte;
+        }
+
+        function pruefeButton1() {
+            const button = document.getElementById('button1');
+            const style = getComputedStyle(button);
+
+            if (!level1Fertig && style.borderRadius !== '0px') {
+                document.getElementById('erfolg1').style.display = 'block';
+                aktualisiertePunkte(100);
+                level1Fertig = true;
+            }
+        }
+
+        function pruefeButton2() {
+            // Dies wird durch CSS :hover geprüft - zeige Erfolg nach erster Interaktion
+            if (!level2Fertig) {
+                const button = document.getElementById('button2');
+                button.addEventListener('mouseenter', function() {
+                    if (!level2Fertig) {
+                        setTimeout(() => {
+                            document.getElementById('erfolg2').style.display = 'block';
+                            aktualisiertePunkte(150);
+                            level2Fertig = true;
+                        }, 500);
+                    }
+                });
+            }
+        }
+
+        function pruefeButton3() {
+            const button = document.getElementById('button3');
+            const style = getComputedStyle(button);
+
+            // Prüfe ob der Button verändert wurde
+            if (!level3Fertig &&
+                (style.padding !== '10px 20px' ||
+                 style.backgroundColor !== 'rgb(255, 255, 255)' ||
+                 style.boxShadow !== 'none')) {
+                document.getElementById('erfolg3').style.display = 'block';
+                aktualisiertePunkte(200);
+                level3Fertig = true;
+            }
+        }
+
+        // Überwache Änderungen
+        setInterval(() => {
+            pruefeButton1();
+            pruefeButton3();
+        }, 500);
+
+        // Initialisiere Button 2 Hover-Check
+        pruefeButton2();
+
+        // Easter Egg für fleißige Schüler
+        document.getElementById('mein-button').addEventListener('click', function() {
+            this.textContent = 'Super! 🎉';
+            this.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
+            this.style.color = 'white';
+            this.style.transform = 'rotate(360deg)';
+            this.style.transition = 'all 0.5s ease';
+        });
+    </script>
+</body>
+</html>$$, '', '', 'gamified', true, 2, '{"level": 2, "duration": "20-25 min", "skills": ["CSS Styling", "Hover Effects", "Button Design"], "age": "8-12"}'),
+
+-- Template 3: Box-Baumeister
+('03 - Box-Baumeister', 'Verstehe das Box-Modell und baue coole Layouts! 📦',
+$$<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Box-Baumeister</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .baustelle {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .bauplan {
+            background: #e8eaf6;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .box-visualizer {
+            background: #fff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 2px dashed #9e9e9e;
+        }
+
+        /* Level 1: Padding verstehen */
+        #box1 {
+            background-color: #ffeb3b;
+            border: 2px solid #333;
+            /* Aufgabe: Gib mir padding! */
+        }
+
+        #box1-inhalt {
+            background-color: #fff3e0;
+        }
+
+        /* Level 2: Margin meistern */
+        #box2 {
+            background-color: #4caf50;
+            padding: 20px;
+            /* Aufgabe: Gib mir margin! */
+        }
+
+        #box3 {
+            background-color: #2196f3;
+            padding: 20px;
+            /* Die Boxen sollen Abstand haben! */
+        }
+
+        /* Level 3: Flexbox Layout */
+        #container {
+            border: 3px solid #333;
+            padding: 10px;
+            /* Aufgabe: Mache mich zu einer Flexbox! */
+        }
+
+        .flex-kind {
+            background-color: #ff9800;
+            padding: 20px;
+            margin: 5px;
+            text-align: center;
+        }
+
+        .mission-karte {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .hilfe-popup {
+            background: #fff;
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .erfolg-animation {
+            animation: erfolg 0.5s ease;
+            background: #c8e6c9 !important;
+        }
+
+        @keyframes erfolg {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .level-anzeige {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .messwerkzeug {
+            background: #263238;
+            color: #81c784;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .baukasten {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .werkzeug-karte {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .werkzeug-karte:hover {
+            border-color: #4caf50;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .erklaerung {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 5px solid #2196f3;
+        }
+
+        .sandbox {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="level-anzeige">
+        <span style="font-size: 24px;">📦</span> Level <span id="level">1</span>/3
+    </div>
+
+    <div class="baustelle">
+        <h1>🏗️ Box-Baumeister - Meistere das Box-Modell!</h1>
+        <p>Willkommen auf der Baustelle! Hier lernst du, wie Boxen im Web funktionieren.</p>
+
+        <div class="erklaerung">
+            <h3>📐 Das Box-Modell</h3>
+            <p>Jedes Element im Web ist eine Box mit:</p>
+            <ul>
+                <li><strong>Content</strong> - Der Inhalt (Text, Bilder)</li>
+                <li><strong>Padding</strong> - Der Innenabstand</li>
+                <li><strong>Border</strong> - Der Rahmen</li>
+                <li><strong>Margin</strong> - Der Außenabstand</li>
+            </ul>
+        </div>
+
+        <!-- Level 1: Padding -->
+        <div class="mission-karte">
+            <h2>🎯 Mission 1: Padding Power!</h2>
+            <p>Die gelbe Box ist zu eng! Der Text klebt am Rand. Gib ihr etwas Luft mit padding!</p>
+            <button onclick="zeigeHilfe('hilfe1')" style="background: white; color: #333; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Hilfe!
+            </button>
+            <div class="hilfe-popup" id="hilfe1">
+                <strong>Tipp:</strong> Frage die KI: "Wie gebe ich box1 ein padding von 20px?"
+                <div class="messwerkzeug">
+                    padding: 20px; /* Alle Seiten */<br>
+                    padding: 10px 20px; /* Oben/Unten Links/Rechts */
+                </div>
+            </div>
+        </div>
+
+        <div class="box-visualizer">
+            <div id="box1">
+                <div id="box1-inhalt">
+                    Ich bin Text in einer Box! Gib mir mehr Platz!
+                </div>
+            </div>
+            <div class="messwerkzeug" id="box1-messen">
+                Aktuell: padding: 0px;
+            </div>
+        </div>
+
+        <!-- Level 2: Margin -->
+        <div class="mission-karte" id="mission2" style="display: none;">
+            <h2>🎯 Mission 2: Margin Magie!</h2>
+            <p>Die grünen und blauen Boxen kleben aneinander! Gib ihnen Abstand mit margin!</p>
+            <button onclick="zeigeHilfe('hilfe2')" style="background: white; color: #333; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Hilfe!
+            </button>
+            <div class="hilfe-popup" id="hilfe2">
+                <strong>Tipp:</strong> Frage die KI: "Wie gebe ich box2 und box3 einen margin?"
+                <div class="messwerkzeug">
+                    margin: 20px; /* Abstand zu allen Seiten */<br>
+                    margin-bottom: 30px; /* Nur unten */
+                </div>
+            </div>
+        </div>
+
+        <div class="box-visualizer" id="level2-bereich" style="display: none;">
+            <div id="box2">Ich bin Box 2 - Grün!</div>
+            <div id="box3">Ich bin Box 3 - Blau!</div>
+            <div class="messwerkzeug" id="margin-messen">
+                Abstand zwischen Boxen: 0px
+            </div>
+        </div>
+
+        <!-- Level 3: Flexbox -->
+        <div class="mission-karte" id="mission3" style="display: none;">
+            <h2>🎯 Mission 3: Flexbox Finale!</h2>
+            <p>Ordne die orangen Boxen nebeneinander an mit Flexbox!</p>
+            <button onclick="zeigeHilfe('hilfe3')" style="background: white; color: #333; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Hilfe!
+            </button>
+            <div class="hilfe-popup" id="hilfe3">
+                <strong>Tipp:</strong> Frage die KI nach:
+                <div class="messwerkzeug">
+                    display: flex;<br>
+                    justify-content: space-between;<br>
+                    align-items: center;
+                </div>
+            </div>
+        </div>
+
+        <div class="box-visualizer" id="level3-bereich" style="display: none;">
+            <div id="container">
+                <div class="flex-kind">Box A</div>
+                <div class="flex-kind">Box B</div>
+                <div class="flex-kind">Box C</div>
+            </div>
+        </div>
+
+        <!-- Werkzeugkasten -->
+        <div class="baukasten">
+            <div class="werkzeug-karte" onclick="erklaere('padding')">
+                <h3>📏 Padding</h3>
+                <p>Innenabstand</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaere('margin')">
+                <h3>🔲 Margin</h3>
+                <p>Außenabstand</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaere('border')">
+                <h3>🖼️ Border</h3>
+                <p>Rahmen</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaere('flexbox')">
+                <h3>💪 Flexbox</h3>
+                <p>Layout-Power</p>
+            </div>
+        </div>
+
+        <!-- Sandbox -->
+        <div class="sandbox">
+            <h3>🎨 Experimentier-Bereich</h3>
+            <p>Baue deine eigene Box-Komposition!</p>
+            <div style="border: 2px dashed #666; padding: 20px; min-height: 200px;">
+                <div id="sandbox-box" style="background: #e91e63; color: white; padding: 20px;">
+                    Ich bin deine Sandbox-Box! Style mich!
+                </div>
+            </div>
+        </div>
+
+        <div id="abschluss" style="display: none;" class="mission-karte" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h2>🏆 Herzlichen Glückwunsch!</h2>
+            <p>Du bist jetzt ein Box-Modell-Meister!</p>
+            <p><strong>Du hast gelernt:</strong></p>
+            <ul>
+                <li>✅ Padding für Innenabstand</li>
+                <li>✅ Margin für Außenabstand</li>
+                <li>✅ Flexbox für moderne Layouts</li>
+                <li>✅ Das komplette Box-Modell!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let aktuellesLevel = 1;
+        let level1Fertig = false;
+        let level2Fertig = false;
+        let level3Fertig = false;
+
+        function zeigeHilfe(id) {
+            const hilfe = document.getElementById(id);
+            hilfe.style.display = hilfe.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function erklaere(thema) {
+            const erklaerungen = {
+                'padding': 'Padding ist wie ein Kissen in der Box!\n\nBeispiele:\npadding: 20px; (alle Seiten)\npadding-top: 10px; (nur oben)\npadding: 10px 20px; (oben/unten links/rechts)',
+                'margin': 'Margin ist der Abstand zwischen Boxen!\n\nBeispiele:\nmargin: 20px; (alle Seiten)\nmargin-bottom: 30px; (nur unten)\nmargin: auto; (zentrieren)',
+                'border': 'Border ist der Rahmen der Box!\n\nBeispiele:\nborder: 2px solid black;\nborder-radius: 10px; (runde Ecken)\nborder-style: dashed; (gestrichelt)',
+                'flexbox': 'Flexbox macht Layout einfach!\n\nHauptbefehle:\ndisplay: flex; (aktivieren)\njustify-content: center; (horizontal)\nalign-items: center; (vertikal)'
+            };
+
+            alert('📚 ' + thema.toUpperCase() + '\n\n' + erklaerungen[thema]);
+        }
+
+        function pruefeLevel1() {
+            const box = document.getElementById('box1');
+            const style = getComputedStyle(box);
+            const padding = parseInt(style.padding);
+
+            if (!level1Fertig && padding > 0) {
+                level1Fertig = true;
+                box.classList.add('erfolg-animation');
+                document.getElementById('box1-messen').textContent = `Super! padding: ${style.padding}`;
+
+                setTimeout(() => {
+                    document.getElementById('mission2').style.display = 'block';
+                    document.getElementById('level2-bereich').style.display = 'block';
+                    document.getElementById('level').textContent = '2';
+                    aktuellesLevel = 2;
+                }, 1000);
+            } else if (padding > 0) {
+                document.getElementById('box1-messen').textContent = `Aktuell: padding: ${style.padding}`;
+            }
+        }
+
+        function pruefeLevel2() {
+            const box2 = document.getElementById('box2');
+            const box3 = document.getElementById('box3');
+            const style2 = getComputedStyle(box2);
+            const style3 = getComputedStyle(box3);
+
+            const margin2 = parseInt(style2.marginBottom) || parseInt(style2.margin) || 0;
+            const margin3 = parseInt(style3.marginTop) || parseInt(style3.margin) || 0;
+
+            if (!level2Fertig && (margin2 > 0 || margin3 > 0)) {
+                level2Fertig = true;
+                box2.classList.add('erfolg-animation');
+                box3.classList.add('erfolg-animation');
+                document.getElementById('margin-messen').textContent = `Super! Abstand: ${margin2 + margin3}px`;
+
+                setTimeout(() => {
+                    document.getElementById('mission3').style.display = 'block';
+                    document.getElementById('level3-bereich').style.display = 'block';
+                    document.getElementById('level').textContent = '3';
+                    aktuellesLevel = 3;
+                }, 1000);
+            }
+        }
+
+        function pruefeLevel3() {
+            const container = document.getElementById('container');
+            const style = getComputedStyle(container);
+
+            if (!level3Fertig && style.display === 'flex') {
+                level3Fertig = true;
+                container.classList.add('erfolg-animation');
+
+                setTimeout(() => {
+                    document.getElementById('abschluss').style.display = 'block';
+                }, 1000);
+            }
+        }
+
+        // Überwache Änderungen
+        setInterval(() => {
+            if (aktuellesLevel === 1) pruefeLevel1();
+            else if (aktuellesLevel === 2) pruefeLevel2();
+            else if (aktuellesLevel === 3) pruefeLevel3();
+        }, 500);
+    </script>
+</body>
+</html>$$, '', '', 'gamified', true, 3, '{"level": 2, "duration": "25-30 min", "skills": ["Box Model", "Padding", "Margin", "Flexbox Basics"], "age": "9-13"}'),
+
+-- Template 4: Bilder-Galerie
+('04 - Bilder-Galerie', 'Erstelle eine coole Fotogalerie mit Grid und Effekten! 🖼️',
+$$<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilder-Galerie</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+
+        .galerie-studio {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .werkbank {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        /* Galerie zum Bearbeiten */
+        #galerie {
+            /* Aufgabe 1: Mache mich zu einem Grid! */
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 300px;
+        }
+
+        .bild {
+            background: #666;
+            border-radius: 8px;
+            overflow: hidden;
+            /* Aufgabe 2: Gib mir coole Hover-Effekte! */
+        }
+
+        .bild img {
             width: 100%;
             height: 100%;
-            background: linear-gradient(to top, #ff0000, #ff8c00, transparent);
-            filter: blur(8px);
-            animation: fire-flicker 0.5s ease-in-out infinite alternate;
+            object-fit: cover;
+            display: block;
+            /* Aufgabe 3: Füge Übergangseffekte hinzu! */
         }
 
-        @keyframes fire-flicker {
-            0% { opacity: 0.8; transform: scaleY(1); }
-            100% { opacity: 1; transform: scaleY(1.1); }
+        .aufgabe-panel {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
-        /* Lightning effect */
-        @keyframes lightning-flash {
-            0%, 90% { opacity: 0; }
-            95% { opacity: 1; }
-            100% { opacity: 0; }
+        .fortschrittsbalken {
+            background: rgba(255, 255, 255, 0.2);
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
         }
 
-        .lightning-flash {
-            position: absolute;
-            inset: 0;
+        .fortschritt {
+            background: linear-gradient(90deg, #4caf50, #81c784);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .hilfe-box {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .code-snippet {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .filter-sammlung {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .filter-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-button:hover {
             background: white;
-            animation: lightning-flash 2s infinite;
+            color: #333;
+            transform: translateY(-2px);
         }
 
-        /* Wave effect */
-        @keyframes wave {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        .erfolgs-nachricht {
+            background: #4caf50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+            animation: slideIn 0.5s ease;
         }
 
-        .wave-effect {
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 50px,
-                rgba(0, 150, 255, 0.5) 50px,
-                rgba(0, 150, 255, 0.5) 100px
-            );
-            animation: wave 3s linear infinite;
-        }
-    </style>
-</body>
-</html>', '', '', 'gamified', true, 1, '{"level": 1, "duration": "5-10 min", "skills": ["Speed", "Commands", "Visual Effects"]}'),
-
--- Template 2: Design Psychology Lab
-('🧠 Design Psychology Lab', 'Wissenschaftlich fundierte Design-Prinzipien spielerisch lernen',
-'<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Design Psychology Lab</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <style>
-        /* Research scanner effect */
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .scanner {
-            background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.5), transparent);
-            animation: scan 2s linear infinite;
+        .bild-platzhalter {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
         }
 
-        /* Mind expansion effect */
-        @keyframes mind-expand {
-            0% { transform: scale(0) rotate(0deg); opacity: 0; }
-            50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
-            100% { transform: scale(1) rotate(360deg); opacity: 0; }
+        .werkzeug-leiste {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
         }
 
-        .mind-expand {
-            animation: mind-expand 1s ease-out;
+        .werkzeug {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .werkzeug:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen" x-data="{
-    // Lab state
-    currentModule: ''intro'',
-    labScore: 0,
-    researchPoints: 0,
-    unlockedPrinciples: [],
-    currentExperiment: null,
+<body>
+    <div class="galerie-studio">
+        <h1>🖼️ Bilder-Galerie Studio</h1>
+        <p>Willkommen im Galerie-Studio! Hier lernst du, wie man professionelle Bildergalerien baut!</p>
 
-    // User profile
-    designPersonality: null,
-    learningPath: []
-    culturalContext: ''western'',
+        <div class="fortschrittsbalken">
+            <div class="fortschritt" id="fortschritt">0%</div>
+        </div>
 
-    // Research data
-    principles: {
-        gestalt: {
-            id: ''gestalt'',
-            name: ''Gestalt Principles'',
-            icon: ''🧩'',
-            research: ''Wertheimer (1923): Human brain organizes visual elements into unified wholes'',
-            experiments: [
-                {
-                    name: ''Proximity Test'',
-                    description: ''Elements close together are perceived as related'',
-                    interactive: true
-                },
-                {
-                    name: ''Similarity Scanner'',
-                    description: ''Similar elements are grouped by the brain'',
-                    interactive: true
-                }
-            ],
-            unlocked: false
-        },
-        color: {
-            id: ''color'',
-            name: ''Color Psychology'',
-            icon: ''🎨'',
-            research: ''Elliot & Maier (2014): Colors trigger specific psychological and physiological responses'',
-            experiments: [
-                {
-                    name: ''Emotion Color Map'',
-                    description: ''Map colors to emotional responses'',
-                    interactive: true
-                },
-                {
-                    name: ''Cultural Color Test'',
-                    description: ''How color meanings change across cultures'',
-                    interactive: true
-                }
-            ],
-            unlocked: false
-        },
-        typography: {
-            id: ''typography'',
-            name: ''Typography Science'',
-            icon: ''🔤'',
-            research: ''Larson et al. (2006): Typography affects reading speed and comprehension by up to 35%'',
-            experiments: [
-                {
-                    name: ''Readability Analyzer'',
-                    description: ''Test reading speed with different fonts'',
-                    interactive: true
-                },
-                {
-                    name: ''Personality Fonts'',
-                    description: ''How fonts convey personality traits'',
-                    interactive: true
-                }
-            ],
-            unlocked: false
-        },
-        whitespace: {
-            id: ''whitespace'',
-            name: ''Spatial Dynamics'',
-            icon: ''📐'',
-            research: ''Pracejus et al. (2013): White space directly correlates with perceived value and luxury'',
-            experiments: [
-                {
-                    name: ''Luxury Perception Test'',
-                    description: ''How spacing affects value perception'',
-                    interactive: true
-                },
-                {
-                    name: ''Cognitive Load Reducer'',
-                    description: ''Optimize spacing for mental processing'',
-                    interactive: true
-                }
-            ],
-            unlocked: false
-        },
-        attention: {
-            id: ''attention'',
-            name: ''Attention Engineering'',
-            icon: ''👁️'',
-            research: ''Itti & Koch (2001): Visual attention follows predictable patterns based on contrast and motion'',
-            experiments: [
-                {
-                    name: ''Eye Tracking Simulator'',
-                    description: ''Predict where users look first'',
-                    interactive: true
-                },
-                {
-                    name: ''Attention Heatmap'',
-                    description: ''Create optimal visual hierarchies'',
-                    interactive: true
-                }
-            ],
-            unlocked: false
-        }
-    },
-
-    // Interactive experiments
-    experiments: {
-        proximityTest: {
-            dots: [],
-            userGroups: 0,
-            actualGroups: 3
-        },
-        colorEmotion: {
-            emotions: [''Happy'', ''Sad'', ''Energetic'', ''Calm'', ''Angry'', ''Peaceful''],
-            colorMap: {}
-        },
-        readabilityTest: {
-            fonts: [''Arial'', ''Times New Roman'', ''Comic Sans'', ''Georgia'', ''Helvetica''],
-            readingTimes: {},
-            currentFont: ''Arial'',
-            startTime: null
-        }
-    },
-
-    // Methods
-    startLab() {
-        this.currentModule = ''personality-test'';
-    },
-
-    setPersonality(type) {
-        this.designPersonality = type;
-        this.labScore += 100;
-        this.showNotification(`Design Personality: ${type}!`, ''success'');
-        this.currentModule = ''research-hub'';
-    },
-
-    unlockPrinciple(principleId) {
-        if (!this.principles[principleId].unlocked && this.researchPoints >= 50) {
-            this.principles[principleId].unlocked = true;
-            this.researchPoints -= 50;
-            this.unlockedPrinciples.push(principleId);
-            this.showNotification(`Unlocked: ${this.principles[principleId].name}!`, ''unlock'');
-        }
-    },
-
-    startExperiment(principleId, experimentIndex) {
-        this.currentExperiment = {
-            principle: principleId,
-            experiment: this.principles[principleId].experiments[experimentIndex],
-            index: experimentIndex
-        };
-        this.currentModule = ''experiment'';
-    },
-
-    completeExperiment(score) {
-        this.labScore += score;
-        this.researchPoints += Math.floor(score / 10);
-        this.learningPath.push(this.currentExperiment);
-        this.showNotification(`Experiment Complete! +${score} points`, ''success'');
-        this.currentModule = ''research-hub'';
-    },
-
-    showNotification(message, type) {
-        // This would show animated notifications
-        console.log(`[${type}] ${message}`);
-    },
-
-    // Experiment: Proximity Test
-    initProximityTest() {
-        // Generate dots in groups
-        this.experiments.proximityTest.dots = [
-            // Group 1
-            { x: 20, y: 20, group: 1 },
-            { x: 25, y: 25, group: 1 },
-            { x: 30, y: 20, group: 1 },
-            // Group 2
-            { x: 60, y: 30, group: 2 },
-            { x: 65, y: 35, group: 2 },
-            { x: 70, y: 30, group: 2 },
-            // Group 3
-            { x: 40, y: 60, group: 3 },
-            { x: 45, y: 65, group: 3 },
-            { x: 50, y: 60, group: 3 }
-        ];
-    },
-
-    // Initialize
-    init() {
-        this.initProximityTest();
-    }
-}">
-    <!-- Lab Header -->
-    <header class="fixed top-0 left-0 right-0 bg-black bg-opacity-90 backdrop-blur-lg z-50 border-b border-blue-500">
-        <div class="max-w-7xl mx-auto px-4 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                        Design Psychology Lab
-                    </h1>
-                    <div class="text-sm text-gray-400">
-                        <span x-show="designPersonality">
-                            <span class="text-green-400">●</span> <span x-text="designPersonality"></span>
-                        </span>
-                    </div>
+        <!-- Level 1: Grid Layout -->
+        <div class="aufgabe-panel">
+            <h2>📐 Level 1: Grid-Meister werden</h2>
+            <p>Deine Bilder stapeln sich übereinander! Ordne sie in einem schönen Grid an!</p>
+            <button onclick="zeigeHilfe('grid-hilfe')" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Zeig mir wie!
+            </button>
+            <div class="hilfe-box" id="grid-hilfe">
+                <p><strong>CSS Grid macht's möglich!</strong> Frage die KI:</p>
+                <p>"Wie mache ich aus #galerie ein Grid mit 3 Spalten?"</p>
+                <div class="code-snippet">
+display: grid;<br>
+grid-template-columns: repeat(3, 1fr);<br>
+gap: 20px;
                 </div>
+                <p>🎯 Tipp: <code>1fr</code> bedeutet "ein Teil des verfügbaren Platzes"</p>
+            </div>
+        </div>
 
-                <div class="flex items-center gap-6">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-yellow-400" x-text="labScore"></div>
-                        <div class="text-xs text-gray-400">Lab Score</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-blue-400" x-text="researchPoints"></div>
-                        <div class="text-xs text-gray-400">Research Points</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-purple-400" x-text="unlockedPrinciples.length"></div>
-                        <div class="text-xs text-gray-400">Discoveries</div>
-                    </div>
+        <div class="werkbank">
+            <div id="galerie">
+                <div class="bild">
+                    <div class="bild-platzhalter">🏔️</div>
+                </div>
+                <div class="bild">
+                    <div class="bild-platzhalter">🌅</div>
+                </div>
+                <div class="bild">
+                    <div class="bild-platzhalter">🏖️</div>
+                </div>
+                <div class="bild">
+                    <div class="bild-platzhalter">🌸</div>
+                </div>
+                <div class="bild">
+                    <div class="bild-platzhalter">🌊</div>
+                </div>
+                <div class="bild">
+                    <div class="bild-platzhalter">🌳</div>
                 </div>
             </div>
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="pt-20 min-h-screen">
-        <!-- Intro Module -->
-        <section x-show="currentModule === ''intro''" x-transition
-                 class="flex items-center justify-center min-h-screen">
-            <div class="text-center max-w-4xl mx-auto px-8">
-                <div class="mb-8">
-                    <div class="text-8xl mb-4 animate-pulse">🧠</div>
-                    <h1 class="text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                        Design Psychology Lab
-                    </h1>
-                    <p class="text-2xl text-gray-400">Where Science Meets Creativity</p>
-                </div>
-
-                <div class="bg-gray-800 rounded-3xl p-8 mb-8 backdrop-blur-lg bg-opacity-80">
-                    <h2 class="text-2xl font-bold mb-6 text-blue-400">🔬 Your Mission</h2>
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div class="bg-gray-900 rounded-xl p-6">
-                            <div class="text-3xl mb-3">🧪</div>
-                            <h3 class="font-bold mb-2">Experiment</h3>
-                            <p class="text-sm text-gray-400">Conduct interactive design experiments</p>
-                        </div>
-                        <div class="bg-gray-900 rounded-xl p-6">
-                            <div class="text-3xl mb-3">📊</div>
-                            <h3 class="font-bold mb-2">Analyze</h3>
-                            <p class="text-sm text-gray-400">Understand the psychology behind design</p>
-                        </div>
-                        <div class="bg-gray-900 rounded-xl p-6">
-                            <div class="text-3xl mb-3">🏆</div>
-                            <h3 class="font-bold mb-2">Master</h3>
-                            <p class="text-sm text-gray-400">Apply principles to create better designs</p>
-                        </div>
-                    </div>
-                </div>
-
-                <button @click="startLab"
-                        class="px-12 py-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-2xl font-bold hover:scale-110 transform transition">
-                    Enter the Lab 🔬
-                </button>
-            </div>
-        </section>
-
-        <!-- Personality Test Module -->
-        <section x-show="currentModule === ''personality-test''" x-transition
-                 class="max-w-4xl mx-auto px-8 py-12">
-            <h2 class="text-4xl font-bold text-center mb-12">Design Personality Assessment</h2>
-
-            <div class="bg-gray-800 rounded-3xl p-8">
-                <p class="text-xl text-center mb-8 text-gray-300">
-                    Choose the design that speaks to you most:
-                </p>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Minimalist -->
-                    <button @click="setPersonality(''Minimalist'')"
-                            class="group relative overflow-hidden rounded-xl bg-white p-8 hover:scale-105 transition transform">
-                        <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100"></div>
-                        <div class="relative z-10">
-                            <div class="h-32 flex items-center justify-center">
-                                <div class="w-16 h-16 bg-black rounded"></div>
-                            </div>
-                            <h3 class="text-black font-bold text-xl">Minimalist</h3>
-                            <p class="text-gray-600 text-sm mt-2">Less is more. Clean, simple, purposeful.</p>
-                        </div>
-                    </button>
-
-                    <!-- Maximalist -->
-                    <button @click="setPersonality(''Maximalist'')"
-                            class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 p-8 hover:scale-105 transition transform">
-                        <div class="absolute inset-0 opacity-50">
-                            <div class="absolute top-4 left-4 w-8 h-8 bg-yellow-400 rounded-full"></div>
-                            <div class="absolute bottom-4 right-4 w-12 h-12 bg-green-400 rounded-full"></div>
-                            <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-red-400 rounded-full"></div>
-                        </div>
-                        <div class="relative z-10">
-                            <div class="h-32 flex items-center justify-center">
-                                <div class="text-6xl">🎨</div>
-                            </div>
-                            <h3 class="text-white font-bold text-xl">Maximalist</h3>
-                            <p class="text-white text-sm mt-2">More is more! Bold, colorful, expressive.</p>
-                        </div>
-                    </button>
-
-                    <!-- Systematic -->
-                    <button @click="setPersonality(''Systematic'')"
-                            class="group relative overflow-hidden rounded-xl bg-gray-900 p-8 hover:scale-105 transition transform">
-                        <div class="absolute inset-0 grid grid-cols-4 gap-2 p-4">
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                            <div class="bg-blue-500 opacity-20"></div>
-                        </div>
-                        <div class="relative z-10">
-                            <div class="h-32 flex items-center justify-center">
-                                <div class="text-6xl">📐</div>
-                            </div>
-                            <h3 class="text-white font-bold text-xl">Systematic</h3>
-                            <p class="text-gray-300 text-sm mt-2">Grid-based, logical, structured design.</p>
-                        </div>
-                    </button>
-
-                    <!-- Experimental -->
-                    <button @click="setPersonality(''Experimental'')"
-                            class="group relative overflow-hidden rounded-xl bg-black p-8 hover:scale-105 transition transform">
-                        <div class="absolute inset-0">
-                            <div class="absolute inset-0 bg-gradient-to-r from-red-600 via-yellow-500 to-green-500 opacity-30 blur-xl animate-pulse"></div>
-                        </div>
-                        <div class="relative z-10">
-                            <div class="h-32 flex items-center justify-center">
-                                <div class="text-6xl animate-spin-slow">🚀</div>
-                            </div>
-                            <h3 class="text-white font-bold text-xl">Experimental</h3>
-                            <p class="text-gray-300 text-sm mt-2">Push boundaries, break rules, innovate.</p>
-                        </div>
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Research Hub -->
-        <section x-show="currentModule === ''research-hub''" x-transition
-                 class="max-w-7xl mx-auto px-8 py-12">
-            <h2 class="text-4xl font-bold text-center mb-12">Research Hub</h2>
-
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <template x-for="(principle, key) in principles" :key="key">
-                    <div class="bg-gray-800 rounded-2xl overflow-hidden"
-                         :class="principle.unlocked ? ''border-2 border-blue-500'' : ''opacity-75''">
-                        <!-- Header -->
-                        <div class="p-6 border-b border-gray-700">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="text-4xl" x-text="principle.icon"></div>
-                                <div x-show="!principle.unlocked"
-                                     class="bg-gray-700 px-3 py-1 rounded-full text-sm">
-                                    🔒 50 RP to unlock
-                                </div>
-                                <div x-show="principle.unlocked"
-                                     class="bg-green-600 px-3 py-1 rounded-full text-sm">
-                                    ✅ Unlocked
-                                </div>
-                            </div>
-                            <h3 class="text-xl font-bold mb-2" x-text="principle.name"></h3>
-                            <p class="text-sm text-gray-400" x-text="principle.research"></p>
-                        </div>
-
-                        <!-- Experiments -->
-                        <div class="p-6">
-                            <h4 class="font-semibold mb-3 text-blue-400">Experiments:</h4>
-                            <div class="space-y-3">
-                                <template x-for="(exp, index) in principle.experiments" :key="index">
-                                    <button @click="principle.unlocked && startExperiment(key, index)"
-                                            :disabled="!principle.unlocked"
-                                            :class="principle.unlocked ? ''hover:bg-gray-700'' : ''opacity-50 cursor-not-allowed''"
-                                            class="w-full text-left p-3 bg-gray-900 rounded-lg transition">
-                                        <div class="font-semibold" x-text="exp.name"></div>
-                                        <div class="text-sm text-gray-400" x-text="exp.description"></div>
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-
-                        <!-- Unlock Button -->
-                        <div x-show="!principle.unlocked" class="p-6 pt-0">
-                            <button @click="unlockPrinciple(key)"
-                                    :disabled="researchPoints < 50"
-                                    :class="researchPoints >= 50 ? ''bg-blue-600 hover:bg-blue-700'' : ''bg-gray-700 opacity-50 cursor-not-allowed''"
-                                    class="w-full py-3 rounded-lg font-bold transition">
-                                Unlock Principle
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="mt-12 text-center">
-                <p class="text-gray-400 mb-4">Need more Research Points?</p>
-                <button class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-bold">
-                    Run Quick Experiments (+10 RP)
-                </button>
-            </div>
-        </section>
-
-        <!-- Experiment Module -->
-        <section x-show="currentModule === ''experiment''" x-transition
-                 class="max-w-6xl mx-auto px-8 py-12">
-            <div x-show="currentExperiment">
-                <h2 class="text-3xl font-bold text-center mb-8">
-                    <span x-text="currentExperiment?.experiment?.name"></span>
-                </h2>
-
-                <!-- Proximity Test -->
-                <div x-show="currentExperiment?.principle === ''gestalt'' && currentExperiment?.index === 0"
-                     class="bg-gray-800 rounded-3xl p-8">
-                    <p class="text-lg mb-6 text-center">
-                        How many groups do you see? Click to select your answer.
-                    </p>
-
-                    <!-- Dot Display -->
-                    <div class="relative bg-white rounded-xl h-96 mb-6">
-                        <template x-for="dot in experiments.proximityTest.dots" :key="dot">
-                            <div class="absolute w-4 h-4 bg-black rounded-full"
-                                 :style="`left: ${dot.x}%; top: ${dot.y}%`"></div>
-                        </template>
-                    </div>
-
-                    <!-- Answer Options -->
-                    <div class="grid grid-cols-5 gap-4">
-                        <template x-for="n in 5" :key="n">
-                            <button @click="experiments.proximityTest.userGroups = n;
-                                           completeExperiment(n === experiments.proximityTest.actualGroups ? 100 : 50)"
-                                    class="py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold">
-                                <span x-text="n"></span> Groups
-                            </button>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Color Emotion Mapping -->
-                <div x-show="currentExperiment?.principle === ''color'' && currentExperiment?.index === 0"
-                     class="bg-gray-800 rounded-3xl p-8">
-                    <p class="text-lg mb-6 text-center">
-                        Match colors to emotions based on your perception
-                    </p>
-
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <!-- Colors -->
-                        <div>
-                            <h3 class="font-bold mb-4">Colors</h3>
-                            <div class="grid grid-cols-3 gap-3">
-                                <div class="h-20 bg-red-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                                <div class="h-20 bg-blue-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                                <div class="h-20 bg-yellow-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                                <div class="h-20 bg-green-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                                <div class="h-20 bg-purple-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                                <div class="h-20 bg-gray-500 rounded-lg cursor-pointer hover:scale-105 transition"></div>
-                            </div>
-                        </div>
-
-                        <!-- Emotions -->
-                        <div>
-                            <h3 class="font-bold mb-4">Emotions</h3>
-                            <div class="space-y-3">
-                                <template x-for="emotion in experiments.colorEmotion.emotions" :key="emotion">
-                                    <div class="bg-gray-900 rounded-lg p-3 hover:bg-gray-700 cursor-pointer transition">
-                                        <span x-text="emotion"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button @click="completeExperiment(150)"
-                            class="mt-8 w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold">
-                        Submit Mapping
-                    </button>
-                </div>
-
-                <!-- Back Button -->
-                <div class="text-center mt-8">
-                    <button @click="currentModule = ''research-hub''"
-                            class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg">
-                        Back to Research Hub
-                    </button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Background Effects -->
-    <div class="fixed inset-0 pointer-events-none">
-        <!-- Scanning Effect -->
-        <div class="absolute inset-0 overflow-hidden opacity-20">
-            <div class="scanner absolute inset-x-0 h-32"></div>
+        <div class="erfolgs-nachricht" id="erfolg1">
+            ✨ Perfekt! Dein Grid sieht fantastisch aus!
         </div>
 
-        <!-- Particle Effect -->
-        <div class="absolute inset-0">
-            <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <div class="absolute top-3/4 right-1/4 w-2 h-2 bg-purple-400 rounded-full animate-pulse animation-delay-1000"></div>
-            <div class="absolute bottom-1/4 left-1/2 w-2 h-2 bg-cyan-400 rounded-full animate-pulse animation-delay-2000"></div>
+        <!-- Level 2: Hover-Effekte -->
+        <div class="aufgabe-panel" id="level2" style="display: none;">
+            <h2>✨ Level 2: Magische Hover-Effekte</h2>
+            <p>Lass die Bilder reagieren, wenn man mit der Maus drüber fährt!</p>
+            <button onclick="zeigeHilfe('hover-hilfe')" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Zeig mir Ideen!
+            </button>
+            <div class="hilfe-box" id="hover-hilfe">
+                <p><strong>Hover-Magie!</strong> Probiere diese Effekte:</p>
+                <div class="code-snippet">
+.bild:hover {<br>
+&nbsp;&nbsp;transform: scale(1.05);<br>
+&nbsp;&nbsp;box-shadow: 0 10px 30px rgba(0,0,0,0.3);<br>
+}<br><br>
+.bild:hover img {<br>
+&nbsp;&nbsp;filter: brightness(1.2);<br>
+}
+                </div>
+                <p>🎨 Oder frage die KI nach "coolen CSS Hover-Effekten für Bilder"!</p>
+            </div>
+        </div>
+
+        <!-- Level 3: Filter und Effekte -->
+        <div class="aufgabe-panel" id="level3" style="display: none;">
+            <h2>🎨 Level 3: Instagram-Filter mit CSS</h2>
+            <p>Verleihe deinen Bildern coole Filter-Effekte!</p>
+            <div class="filter-sammlung">
+                <button class="filter-button" onclick="setzeFilter('grayscale')">⚫ Schwarz-Weiß</button>
+                <button class="filter-button" onclick="setzeFilter('sepia')">🟤 Sepia</button>
+                <button class="filter-button" onclick="setzeFilter('blur')">💨 Weichzeichner</button>
+                <button class="filter-button" onclick="setzeFilter('brightness')">☀️ Helligkeit</button>
+                <button class="filter-button" onclick="setzeFilter('contrast')">🎯 Kontrast</button>
+            </div>
+            <div class="hilfe-box" style="display: block; background: rgba(255, 255, 255, 0.1); color: white;">
+                <p>Klicke auf die Filter-Buttons oder erstelle eigene mit CSS!</p>
+                <div class="code-snippet">
+filter: grayscale(100%);<br>
+filter: sepia(50%);<br>
+filter: blur(5px);<br>
+filter: brightness(1.5) contrast(1.2);
+                </div>
+            </div>
+        </div>
+
+        <!-- Werkzeug-Leiste -->
+        <div class="werkzeug-leiste">
+            <div class="werkzeug" onclick="erklaereWerkzeug('grid')">
+                📐 Grid
+            </div>
+            <div class="werkzeug" onclick="erklaereWerkzeug('transform')">
+                🔄 Transform
+            </div>
+            <div class="werkzeug" onclick="erklaereWerkzeug('filter')">
+                🎨 Filter
+            </div>
+            <div class="werkzeug" onclick="erklaereWerkzeug('transition')">
+                ⏱️ Transition
+            </div>
+            <div class="werkzeug" onclick="erklaereWerkzeug('responsive')">
+                📱 Responsive
+            </div>
+        </div>
+
+        <!-- Bonus: Eigene Galerie -->
+        <div class="aufgabe-panel" id="bonus" style="display: none; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h2>🏆 Bonus: Deine Traum-Galerie!</h2>
+            <p>Du hast alle Werkzeuge gemeistert! Jetzt kannst du:</p>
+            <ul>
+                <li>✅ Bilder in einem Grid anordnen</li>
+                <li>✅ Coole Hover-Effekte hinzufügen</li>
+                <li>✅ Filter und Transformationen anwenden</li>
+                <li>✅ Alles responsive machen</li>
+            </ul>
+            <p><strong>Challenge:</strong> Frage die KI nach einer "Masonry-Galerie" oder "Lightbox-Effekt"!</p>
+        </div>
+
+        <div class="erfolgs-nachricht" id="erfolg-final" style="display: none;">
+            🎉 Herzlichen Glückwunsch! Du bist jetzt ein Galerie-Profi!
         </div>
     </div>
 
-    <style>
-        @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+    <script>
+        let fortschritt = 0;
+        let gridFertig = false;
+        let hoverFertig = false;
+        let filterFertig = false;
+
+        function zeigeHilfe(id) {
+            const hilfe = document.getElementById(id);
+            hilfe.style.display = hilfe.style.display === 'none' ? 'block' : 'none';
         }
 
-        .animate-spin-slow {
-            animation: spin-slow 10s linear infinite;
+        function aktualisierteFortschritt() {
+            document.getElementById('fortschritt').style.width = fortschritt + '%';
+            document.getElementById('fortschritt').textContent = fortschritt + '%';
         }
 
-        .animation-delay-1000 {
-            animation-delay: 1s;
+        function erklaereWerkzeug(werkzeug) {
+            const erklaerungen = {
+                'grid': 'CSS Grid:\n\nErstelle 2D-Layouts!\n- display: grid\n- grid-template-columns\n- grid-gap\n- grid-area',
+                'transform': 'Transform:\n\nBewege und drehe Elemente!\n- scale() - Größe ändern\n- rotate() - Drehen\n- translate() - Verschieben\n- skew() - Verzerren',
+                'filter': 'CSS Filter:\n\nBildeffekte direkt im Browser!\n- blur() - Weichzeichner\n- brightness() - Helligkeit\n- contrast() - Kontrast\n- grayscale() - Schwarz-Weiß',
+                'transition': 'Transitions:\n\nSanfte Übergänge!\n- transition: all 0.3s ease\n- transition-property\n- transition-duration\n- transition-timing-function',
+                'responsive': 'Responsive Design:\n\nFür alle Bildschirme!\n- Media Queries\n- Flexible Units (%, vw, vh)\n- Mobile First\n- Grid/Flexbox'
+            };
+
+            alert('🛠️ ' + werkzeug.toUpperCase() + '\n\n' + erklaerungen[werkzeug]);
         }
 
-        .animation-delay-2000 {
-            animation-delay: 2s;
+        function setzeFilter(filterTyp) {
+            const bilder = document.querySelectorAll('.bild img, .bild-platzhalter');
+            const filterWerte = {
+                'grayscale': 'grayscale(100%)',
+                'sepia': 'sepia(80%)',
+                'blur': 'blur(3px)',
+                'brightness': 'brightness(1.3)',
+                'contrast': 'contrast(1.5)'
+            };
+
+            bilder.forEach(bild => {
+                bild.style.filter = filterWerte[filterTyp];
+                bild.style.transition = 'filter 0.3s ease';
+            });
+
+            if (!filterFertig) {
+                filterFertig = true;
+                fortschritt = 100;
+                aktualisierteFortschritt();
+                document.getElementById('bonus').style.display = 'block';
+                document.getElementById('erfolg-final').style.display = 'block';
+            }
         }
-    </style>
-</body>
-</html>', '', '', 'gamified', true, 2, '{"level": 3, "duration": "20-30 min", "skills": ["Design Psychology", "Research", "Analysis"]}'),
 
--- Template 3: Interaction Playground
-('🎯 Interaction Playground', 'Master Touch, Click & Hover - Das ultimative UX Training',
-'<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interaction Playground</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-<body class="bg-gray-900 text-white min-h-screen overflow-x-hidden" x-data="{
-    // Game state
-    currentLevel: 1,
-    score: 0,
-    lives: 3,
-    combo: 0,
-    gameMode: ''menu'', // menu, playing, complete
+        function pruefeGrid() {
+            const galerie = document.getElementById('galerie');
+            const style = getComputedStyle(galerie);
 
-    // Interaction types discovered
-    interactions: {
-        click: { discovered: false, count: 0, mastery: 0 },
-        doubleClick: { discovered: false, count: 0, mastery: 0 },
-        hover: { discovered: false, count: 0, mastery: 0 },
-        drag: { discovered: false, count: 0, mastery: 0 },
-        swipe: { discovered: false, count: 0, mastery: 0 },
-        pinch: { discovered: false, count: 0, mastery: 0 },
-        rotate: { discovered: false, count: 0, mastery: 0 },
-        shake: { discovered: false, count: 0, mastery: 0 },
-        longPress: { discovered: false, count: 0, mastery: 0 },
-        scroll: { discovered: false, count: 0, mastery: 0 }
-    },
+            if (!gridFertig && style.display === 'grid') {
+                gridFertig = true;
+                fortschritt = 33;
+                aktualisierteFortschritt();
+                document.getElementById('erfolg1').style.display = 'block';
 
-    // Challenges
-    challenges: [
-        {
-            level: 1,
-            name: ''Click Master'',
-            description: ''Master the art of clicking'',
-            tasks: [
-                { type: ''click'', target: ''button'', count: 5, completed: false },
-                { type: ''doubleClick'', target: ''card'', count: 3, completed: false },
-                { type: ''click'', target: ''small'', count: 10, completed: false }
-            ]
-        },
-        {
-            level: 2,
-            name: ''Hover Hero'',
-            description: ''Discover the power of hovering'',
-            tasks: [
-                { type: ''hover'', target: ''menu'', duration: 2000, completed: false },
-                { type: ''hover'', target: ''tooltip'', count: 5, completed: false },
-                { type: ''hover'', target: ''reveal'', count: 8, completed: false }
-            ]
-        },
-        {
-            level: 3,
-            name: ''Drag & Drop Dynasty'',
-            description: ''Move elements with precision'',
-            tasks: [
-                { type: ''drag'', target: ''card'', count: 5, completed: false },
-                { type: ''drag'', target: ''sort'', count: 3, completed: false },
-                { type: ''drag'', target: ''puzzle'', count: 1, completed: false }
-            ]
+                setTimeout(() => {
+                    document.getElementById('level2').style.display = 'block';
+                }, 1000);
+            }
         }
-    ],
 
-    // Current challenge
-    get currentChallenge() {
-        return this.challenges[this.currentLevel - 1];
-    },
+        function pruefeHover() {
+            if (gridFertig && !hoverFertig) {
+                // Prüfe ob Hover-Styles existieren
+                const testElement = document.querySelector('.bild');
+                testElement.addEventListener('mouseenter', function() {
+                    const style = getComputedStyle(this);
+                    if (style.transform !== 'none' || style.boxShadow !== 'none') {
+                        if (!hoverFertig) {
+                            hoverFertig = true;
+                            fortschritt = 66;
+                            aktualisierteFortschritt();
 
-    // Interactive elements on screen
-    interactiveElements: [],
+                            setTimeout(() => {
+                                document.getElementById('level3').style.display = 'block';
+                            }, 500);
+                        }
+                    }
+                });
+            }
+        }
 
-    // Touch/Mouse tracking
-    touchStart: { x: 0, y: 0 },
-    touchEnd: { x: 0, y: 0 },
-    isDragging: false,
-    draggedElement: null,
+        // Überwache Änderungen
+        setInterval(() => {
+            pruefeGrid();
+            if (gridFertig) {
+                pruefeHover();
+            }
+        }, 500);
 
-    // Methods
-    startGame() {
-        this.gameMode = ''playing'';
-        this.score = 0;
-        this.lives = 3;
-        this.combo = 0;
-        this.generateInteractiveElements();
-    },
+        // Easter Egg: Geheime Tastenkombination
+        let konamiCode = [];
+        const geheimCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];
 
-    generateInteractiveElements() {
-        this.interactiveElements = [];
-        const challenge = this.currentChallenge;
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.key);
+            konamiCode = konamiCode.slice(-4);
 
-        // Generate elements based on current challenge
-        challenge.tasks.forEach((task, index) => {
-            for (let i = 0; i < (task.count || 1); i++) {
-                this.interactiveElements.push({
-                    id: `elem-${index}-${i}`,
-                    type: task.target,
-                    interactionType: task.type,
-                    x: Math.random() * 80 + 10,
-                    y: Math.random() * 60 + 20,
-                    completed: false,
-                    size: task.target === ''small'' ? ''small'' : ''normal''
+            if (konamiCode.join(',') === geheimCode.join(',')) {
+                alert('🎉 Geheim-Code aktiviert! Du hast den Matrix-Filter freigeschaltet!');
+                const bilder = document.querySelectorAll('.bild');
+                bilder.forEach(bild => {
+                    bild.style.animation = 'matrix 2s infinite';
                 });
             }
         });
-    },
-
-    handleInteraction(type, elementId) {
-        const element = this.interactiveElements.find(e => e.id === elementId);
-        if (!element || element.completed) return;
-
-        if (element.interactionType === type) {
-            // Correct interaction
-            element.completed = true;
-            this.score += 100 * (this.combo + 1);
-            this.combo++;
-            this.interactions[type].count++;
-            this.interactions[type].mastery = Math.min(100, this.interactions[type].mastery + 10);
-
-            if (!this.interactions[type].discovered) {
-                this.interactions[type].discovered = true;
-                this.showDiscovery(type);
-            }
-
-            this.checkLevelComplete();
-        } else {
-            // Wrong interaction
-            this.combo = 0;
-            this.lives--;
-            this.showFeedback(''wrong'', element);
-
-            if (this.lives <= 0) {
-                this.gameOver();
-            }
-        }
-    },
-
-    checkLevelComplete() {
-        const allComplete = this.interactiveElements.every(e => e.completed);
-        if (allComplete) {
-            this.levelComplete();
-        }
-    },
-
-    levelComplete() {
-        this.score += 1000 * this.currentLevel;
-        if (this.currentLevel < this.challenges.length) {
-            this.currentLevel++;
-            this.generateInteractiveElements();
-            this.showLevelUp();
-        } else {
-            this.gameComplete();
-        }
-    },
-
-    gameComplete() {
-        this.gameMode = ''complete'';
-    },
-
-    gameOver() {
-        this.gameMode = ''gameover'';
-    },
-
-    showDiscovery(type) {
-        // Animation for discovering new interaction
-        console.log(`Discovered: ${type}!`);
-    },
-
-    showFeedback(type, element) {
-        // Visual feedback for interactions
-        console.log(`Feedback: ${type} on ${element.id}`);
-    },
-
-    showLevelUp() {
-        // Level up animation
-        console.log(''Level Up!'');
-    },
-
-    // Touch handlers
-    handleTouchStart(e) {
-        this.touchStart = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY
-        };
-    },
-
-    handleTouchEnd(e) {
-        this.touchEnd = {
-            x: e.changedTouches[0].clientX,
-            y: e.changedTouches[0].clientY
-        };
-
-        const deltaX = this.touchEnd.x - this.touchStart.x;
-        const deltaY = this.touchEnd.y - this.touchStart.y;
-
-        // Detect swipe
-        if (Math.abs(deltaX) > 50 || Math.abs(deltaY) > 50) {
-            this.handleInteraction(''swipe'', e.target.id);
-        }
-    },
-
-    // Get interaction icon
-    getInteractionIcon(type) {
-        const icons = {
-            click: ''👆'',
-            doubleClick: ''👆👆'',
-            hover: ''👋'',
-            drag: ''✊'',
-            swipe: ''👉'',
-            pinch: ''🤏'',
-            rotate: ''🔄'',
-            shake: ''🫨'',
-            longPress: ''⏱️'',
-            scroll: ''📜''
-        };
-        return icons[type] || ''❓'';
-    },
-
-    // Initialize
-    init() {
-        // Add global event listeners
-        document.addEventListener(''touchstart'', this.handleTouchStart.bind(this));
-        document.addEventListener(''touchend'', this.handleTouchEnd.bind(this));
-    }
-}">
-    <!-- Menu Screen -->
-    <div x-show="gameMode === ''menu''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-4xl mx-auto px-8">
-            <div class="mb-12">
-                <h1 class="text-7xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
-                    Interaction Playground
-                </h1>
-                <p class="text-2xl text-gray-400">Master Every Click, Touch & Gesture</p>
-            </div>
-
-            <!-- Interaction Types Preview -->
-            <div class="bg-gray-800 rounded-3xl p-8 mb-8">
-                <h2 class="text-2xl font-bold mb-6 text-yellow-400">🎮 Discover 10 Interaction Types</h2>
-                <div class="grid grid-cols-5 gap-4">
-                    <template x-for="(data, type) in interactions" :key="type">
-                        <div class="bg-gray-900 rounded-xl p-4 text-center">
-                            <div class="text-3xl mb-2" x-text="getInteractionIcon(type)"></div>
-                            <div class="text-xs capitalize" x-text="type"></div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- How to Play -->
-            <div class="grid md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-3xl mb-3">🎯</div>
-                    <h3 class="font-bold mb-2">Find & Interact</h3>
-                    <p class="text-sm text-gray-400">Discover elements and interact correctly</p>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-3xl mb-3">⚡</div>
-                    <h3 class="font-bold mb-2">Build Combos</h3>
-                    <p class="text-sm text-gray-400">Chain correct interactions for bonus points</p>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-3xl mb-3">🏆</div>
-                    <h3 class="font-bold mb-2">Master All</h3>
-                    <p class="text-sm text-gray-400">Unlock and master every interaction type</p>
-                </div>
-            </div>
-
-            <button @click="startGame"
-                    class="px-12 py-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-3xl font-bold hover:scale-110 transform transition">
-                Start Playing! 🎮
-            </button>
-        </div>
-    </div>
-
-    <!-- Game Screen -->
-    <div x-show="gameMode === ''playing''" x-transition class="relative min-h-screen">
-        <!-- Game HUD -->
-        <div class="fixed top-0 left-0 right-0 bg-black bg-opacity-90 p-4 z-50">
-            <div class="max-w-6xl mx-auto">
-                <!-- Top Stats -->
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex gap-6">
-                        <!-- Lives -->
-                        <div class="flex gap-1">
-                            <template x-for="i in 3" :key="i">
-                                <span class="text-2xl"
-                                      :class="i <= lives ? ''text-red-500'' : ''text-gray-600''">
-                                    ❤️
-                                </span>
-                            </template>
-                        </div>
-
-                        <!-- Score -->
-                        <div>
-                            <span class="text-sm text-gray-400">Score</span>
-                            <span class="text-2xl font-bold text-yellow-400 ml-2" x-text="score"></span>
-                        </div>
-
-                        <!-- Combo -->
-                        <div x-show="combo > 0">
-                            <span class="text-sm text-gray-400">Combo</span>
-                            <span class="text-2xl font-bold text-orange-400 ml-2" x-text="combo + ''x''"></span>
-                        </div>
-                    </div>
-
-                    <!-- Level Info -->
-                    <div class="text-center">
-                        <div class="text-sm text-gray-400">Level <span x-text="currentLevel"></span></div>
-                        <div class="text-xl font-bold" x-text="currentChallenge?.name"></div>
-                    </div>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="bg-gray-700 rounded-full h-2">
-                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-300"
-                         :style="`width: ${(interactiveElements.filter(e => e.completed).length / interactiveElements.length) * 100}%`"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Challenge Instructions -->
-        <div class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-lg px-6 py-3 z-40">
-            <p class="text-lg" x-text="currentChallenge?.description"></p>
-        </div>
-
-        <!-- Interactive Playground -->
-        <div class="pt-40 px-8 pb-20">
-            <!-- Interactive Elements -->
-            <template x-for="element in interactiveElements" :key="element.id">
-                <div :id="element.id"
-                     class="absolute transition-all duration-300"
-                     :style="`left: ${element.x}%; top: ${element.y}%`"
-                     :class="{
-                         ''opacity-30'': element.completed,
-                         ''cursor-pointer'': element.interactionType === ''click'',
-                         ''cursor-move'': element.interactionType === ''drag''
-                     }">
-
-                    <!-- Click Elements -->
-                    <div x-show="element.type === ''button''"
-                         @click="handleInteraction(''click'', element.id)"
-                         class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transform hover:scale-105 transition">
-                        Click Me!
-                    </div>
-
-                    <!-- Double Click Elements -->
-                    <div x-show="element.type === ''card''"
-                         @dblclick="handleInteraction(''doubleClick'', element.id)"
-                         class="bg-gradient-to-br from-purple-600 to-pink-600 w-32 h-32 rounded-xl flex items-center justify-center shadow-lg">
-                        <p class="text-center">Double Click</p>
-                    </div>
-
-                    <!-- Small Click Targets -->
-                    <div x-show="element.type === ''small''"
-                         @click="handleInteraction(''click'', element.id)"
-                         class="w-8 h-8 bg-yellow-500 rounded-full hover:bg-yellow-600 transition"></div>
-
-                    <!-- Hover Elements -->
-                    <div x-show="element.type === ''menu''"
-                         @mouseenter="handleInteraction(''hover'', element.id)"
-                         class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition">
-                        <p class="mb-2">Hover Menu</p>
-                        <div class="space-y-1 text-sm text-gray-400">
-                            <p>Option 1</p>
-                            <p>Option 2</p>
-                            <p>Option 3</p>
-                        </div>
-                    </div>
-
-                    <!-- Tooltip Elements -->
-                    <div x-show="element.type === ''tooltip''"
-                         @mouseenter="handleInteraction(''hover'', element.id)"
-                         class="relative group">
-                        <div class="bg-green-600 px-4 py-2 rounded">
-                            Hover for tip
-                        </div>
-                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-black rounded opacity-0 group-hover:opacity-100 transition">
-                            Tooltip!
-                        </div>
-                    </div>
-
-                    <!-- Reveal Elements -->
-                    <div x-show="element.type === ''reveal''"
-                         @mouseenter="handleInteraction(''hover'', element.id)"
-                         class="relative w-40 h-40 bg-gray-800 rounded-lg overflow-hidden group">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-0 group-hover:opacity-100 transition"></div>
-                        <p class="absolute bottom-2 left-2 right-2 text-center opacity-0 group-hover:opacity-100 transition">
-                            Revealed!
-                        </p>
-                    </div>
-
-                    <!-- Completion Indicator -->
-                    <div x-show="element.completed"
-                         class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span class="text-4xl">✅</span>
-                    </div>
-                </div>
-            </template>
-        </div>
-
-        <!-- Interaction Discovery Panel -->
-        <div class="fixed bottom-0 left-0 right-0 bg-gray-800 p-4">
-            <div class="max-w-6xl mx-auto">
-                <h3 class="text-sm font-bold mb-2 text-gray-400">Discovered Interactions</h3>
-                <div class="flex gap-4 overflow-x-auto">
-                    <template x-for="(data, type) in interactions" :key="type">
-                        <div x-show="data.discovered"
-                             class="bg-gray-900 rounded-lg p-3 min-w-[120px]">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-2xl" x-text="getInteractionIcon(type)"></span>
-                                <span class="text-sm capitalize" x-text="type"></span>
-                            </div>
-                            <div class="text-xs text-gray-400">
-                                Mastery: <span x-text="data.mastery"></span>%
-                            </div>
-                            <div class="bg-gray-700 rounded-full h-1 mt-1">
-                                <div class="bg-green-500 h-full rounded-full transition-all duration-300"
-                                     :style="`width: ${data.mastery}%`"></div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Complete Screen -->
-    <div x-show="gameMode === ''complete''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">🏆</div>
-                <h1 class="text-5xl font-bold mb-4">Interaction Master!</h1>
-                <p class="text-2xl text-gray-400">You''ve mastered all interaction types!</p>
-            </div>
-
-            <!-- Final Score -->
-            <div class="bg-gray-800 rounded-3xl p-8 mb-8">
-                <div class="text-6xl font-bold text-yellow-400 mb-4" x-text="score.toLocaleString()"></div>
-                <p class="text-xl text-gray-400">Final Score</p>
-            </div>
-
-            <!-- Mastery Summary -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                <template x-for="(data, type) in interactions" :key="type">
-                    <div class="bg-gray-800 rounded-lg p-4 text-center">
-                        <div class="text-3xl mb-2" x-text="getInteractionIcon(type)"></div>
-                        <div class="text-sm capitalize" x-text="type"></div>
-                        <div class="text-xs text-gray-400 mt-1">
-                            <span x-text="data.count"></span> uses
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-4 justify-center">
-                <button @click="startGame"
-                        class="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-bold hover:scale-105 transition">
-                    Play Again
-                </button>
-                <button @click="gameMode = ''menu''"
-                        class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition">
-                    Main Menu
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div x-show="gameMode === ''gameover''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">💔</div>
-                <h1 class="text-5xl font-bold mb-4">Game Over</h1>
-                <p class="text-2xl text-gray-400">Keep practicing!</p>
-            </div>
-
-            <div class="bg-gray-800 rounded-3xl p-8 mb-8">
-                <p class="text-xl mb-4">Final Score</p>
-                <div class="text-4xl font-bold text-yellow-400" x-text="score"></div>
-            </div>
-
-            <div class="flex gap-4 justify-center">
-                <button @click="startGame"
-                        class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold">
-                    Try Again
-                </button>
-                <button @click="gameMode = ''menu''"
-                        class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold">
-                    Main Menu
-                </button>
-            </div>
-        </div>
-    </div>
+    </script>
 </body>
-</html>', '', '', 'gamified', true, 3, '{"level": 2, "duration": "15-20 min", "skills": ["UX", "Interactions", "Touch", "Gestures"]}'),
+</html>$$, '', '', 'gamified', true, 4, '{"level": 3, "duration": "25-30 min", "skills": ["CSS Grid", "Image Handling", "Filters", "Hover Effects"], "age": "10-14"}'),
 
--- Template 4: Code Combat
-('⚔️ Code Combat', 'Programming als RPG - Kämpfe mit Code!',
-'<!DOCTYPE html>
+-- Template 5: Mein erstes Spiel
+('05 - Mein erstes Spiel', 'Programmiere ein einfaches Klick-Spiel mit JavaScript! 🎮',
+$$<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code Combat - Programming RPG</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <title>Mein erstes Spiel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .spiel-studio {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+        }
+
+        .spiel-bereich {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 400px;
+            position: relative;
+        }
+
+        #spielfeld {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            border: 3px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        #ziel {
+            width: 50px;
+            height: 50px;
+            background: #ffeb3b;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            display: none;
+            /* Aufgabe: Zeige mich und mache mich klickbar! */
+        }
+
+        #punkte-anzeige {
+            font-size: 30px;
+            text-align: center;
+            margin: 20px 0;
+            /* Aufgabe: Zeige die Punkte an! */
+        }
+
+        #start-button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            /* Aufgabe: Starte das Spiel wenn geklickt! */
+        }
+
+        .lern-panel {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .code-editor {
+            background: #263238;
+            color: #aed581;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+        }
+
+        .hilfe-bereich {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .variable-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+        }
+
+        .erfolg {
+            background: #4caf50;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+            animation: erfolg-animation 0.5s ease;
+        }
+
+        @keyframes erfolg-animation {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .werkzeugkiste {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .werkzeug-karte {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .werkzeug-karte:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .level-fortschritt {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .level-punkt {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .level-punkt.aktiv {
+            background: #4caf50;
+        }
+
+        #timer {
+            font-size: 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
 </head>
-<body class="bg-black text-white min-h-screen" x-data="{
-    // Player stats
-    player: {
-        name: ''CodeWarrior'',
-        level: 1,
-        hp: 100,
-        maxHp: 100,
-        mp: 50,
-        maxMp: 50,
-        exp: 0,
-        expToNext: 100,
-        class: ''Frontend Mage'',
-        skills: []
-    },
+<body>
+    <div class="spiel-studio">
+        <h1>🎮 Mein erstes Spiel - Click & Catch!</h1>
+        <p>Lerne JavaScript, während du dein eigenes Spiel baust!</p>
 
-    // Enemy data
-    currentEnemy: null,
-    enemies: [
-        {
-            name: ''Bug Swarm'',
-            hp: 50,
-            maxHp: 50,
-            weakness: ''debugging'',
-            image: ''🐛'',
-            attacks: [''Syntax Error'', ''Null Reference''],
-            rewards: { exp: 25, skill: ''console.log()'' }
-        },
-        {
-            name: ''CSS Chaos'',
-            hp: 75,
-            maxHp: 75,
-            weakness: ''styling'',
-            image: ''🎨'',
-            attacks: [''Z-Index Nightmare'', ''Flexbox Confusion''],
-            rewards: { exp: 50, skill: ''display: flex'' }
-        },
-        {
-            name: ''Async Dragon'',
-            hp: 100,
-            maxHp: 100,
-            weakness: ''promises'',
-            image: ''🐉'',
-            attacks: [''Callback Hell'', ''Race Condition''],
-            rewards: { exp: 100, skill: ''async/await'' }
-        }
-    ],
+        <div class="level-fortschritt">
+            <div class="level-punkt aktiv" id="level1">1</div>
+            <div class="level-punkt" id="level2">2</div>
+            <div class="level-punkt" id="level3">3</div>
+            <div class="level-punkt" id="level4">4</div>
+        </div>
 
-    // Game state
-    gameState: ''menu'', // menu, battle, victory, defeat, skillTree
-    battleLog: [],
-    currentTurn: ''player'',
+        <!-- Level 1: Variablen verstehen -->
+        <div class="lern-panel" id="lern1">
+            <h2>📦 Level 1: Variablen - Die Spielzutaten</h2>
+            <p>Ein Spiel braucht Variablen um Dinge zu speichern, wie Punkte!</p>
 
-    // Skills/Spells
-    availableSkills: [
-        {
-            id: ''basic_attack'',
-            name: ''Basic Attack'',
-            type: ''damage'',
-            power: 20,
-            mpCost: 0,
-            description: ''A simple code strike'',
-            code: ''enemy.hp -= 20;'',
-            unlocked: true
-        },
-        {
-            id: ''console_log'',
-            name: ''Console.log()'',
-            type: ''debug'',
-            power: 30,
-            mpCost: 10,
-            description: ''Debug attack - super effective against bugs'',
-            code: ''console.log(enemy.weakness);'',
-            unlocked: false
-        },
-        {
-            id: ''flex_shield'',
-            name: ''Flexbox Shield'',
-            type: ''defense'',
-            power: 0,
-            mpCost: 15,
-            description: ''Reduces incoming damage'',
-            code: ''display: flex; align-items: center;'',
-            unlocked: false
-        },
-        {
-            id: ''async_heal'',
-            name: ''Async Heal'',
-            type: ''heal'',
-            power: 40,
-            mpCost: 20,
-            description: ''Restore HP over time'',
-            code: ''await healPlayer(40);'',
-            unlocked: false
-        }
-    ],
-
-    // Inventory
-    inventory: {
-        potions: 3,
-        ethers: 2,
-        debuggers: 1
-    },
-
-    // Methods
-    startBattle() {
-        this.gameState = ''battle'';
-        this.currentEnemy = {...this.enemies[0]};
-        this.battleLog = [''A wild '' + this.currentEnemy.name + '' appears!''];
-        this.currentTurn = ''player'';
-    },
-
-    useSkill(skill) {
-        if (this.currentTurn !== ''player'') return;
-        if (this.player.mp < skill.mpCost) {
-            this.addBattleLog(''Not enough MP!'');
-            return;
-        }
-
-        this.player.mp -= skill.mpCost;
-
-        switch(skill.type) {
-            case ''damage'':
-            case ''debug'':
-                const damage = skill.power * (skill.type === ''debug'' && this.currentEnemy.weakness === ''debugging'' ? 2 : 1);
-                this.currentEnemy.hp = Math.max(0, this.currentEnemy.hp - damage);
-                this.addBattleLog(`${skill.name} deals ${damage} damage!`);
-                break;
-            case ''heal'':
-                const healAmount = Math.min(skill.power, this.player.maxHp - this.player.hp);
-                this.player.hp += healAmount;
-                this.addBattleLog(`${skill.name} heals ${healAmount} HP!`);
-                break;
-            case ''defense'':
-                this.addBattleLog(`${skill.name} activated! Defense increased!`);
-                break;
-        }
-
-        this.checkBattleEnd();
-        if (this.gameState === ''battle'') {
-            this.enemyTurn();
-        }
-    },
-
-    useItem(item) {
-        if (this.currentTurn !== ''player'' || this.inventory[item] <= 0) return;
-
-        this.inventory[item]--;
-
-        switch(item) {
-            case ''potions'':
-                const healAmount = Math.min(50, this.player.maxHp - this.player.hp);
-                this.player.hp += healAmount;
-                this.addBattleLog(`Potion restores ${healAmount} HP!`);
-                break;
-            case ''ethers'':
-                const mpAmount = Math.min(25, this.player.maxMp - this.player.mp);
-                this.player.mp += mpAmount;
-                this.addBattleLog(`Ether restores ${mpAmount} MP!`);
-                break;
-            case ''debuggers'':
-                this.currentEnemy.hp = Math.max(0, this.currentEnemy.hp - 50);
-                this.addBattleLog(`Debugger deals 50 damage to bugs!`);
-                break;
-        }
-
-        this.checkBattleEnd();
-        if (this.gameState === ''battle'') {
-            this.enemyTurn();
-        }
-    },
-
-    enemyTurn() {
-        this.currentTurn = ''enemy'';
-
-        setTimeout(() => {
-            const attack = this.currentEnemy.attacks[Math.floor(Math.random() * this.currentEnemy.attacks.length)];
-            const damage = Math.floor(Math.random() * 20) + 10;
-            this.player.hp = Math.max(0, this.player.hp - damage);
-            this.addBattleLog(`${this.currentEnemy.name} uses ${attack} for ${damage} damage!`);
-
-            this.checkBattleEnd();
-            this.currentTurn = ''player'';
-        }, 1500);
-    },
-
-    checkBattleEnd() {
-        if (this.currentEnemy.hp <= 0) {
-            this.victory();
-        } else if (this.player.hp <= 0) {
-            this.defeat();
-        }
-    },
-
-    victory() {
-        this.gameState = ''victory'';
-        this.player.exp += this.currentEnemy.rewards.exp;
-
-        // Check level up
-        if (this.player.exp >= this.player.expToNext) {
-            this.levelUp();
-        }
-
-        // Unlock new skill
-        const rewardSkill = this.currentEnemy.rewards.skill;
-        const skill = this.availableSkills.find(s => s.name === rewardSkill);
-        if (skill && !skill.unlocked) {
-            skill.unlocked = true;
-            this.player.skills.push(skill.id);
-        }
-    },
-
-    defeat() {
-        this.gameState = ''defeat'';
-    },
-
-    levelUp() {
-        this.player.level++;
-        this.player.exp -= this.player.expToNext;
-        this.player.expToNext = this.player.level * 100;
-        this.player.maxHp += 20;
-        this.player.maxMp += 10;
-        this.player.hp = this.player.maxHp;
-        this.player.mp = this.player.maxMp;
-    },
-
-    addBattleLog(message) {
-        this.battleLog.push(message);
-        // Keep only last 5 messages
-        if (this.battleLog.length > 5) {
-            this.battleLog.shift();
-        }
-    },
-
-    nextBattle() {
-        // Move to next enemy
-        const currentIndex = this.enemies.findIndex(e => e.name === this.currentEnemy.name);
-        if (currentIndex < this.enemies.length - 1) {
-            this.currentEnemy = {...this.enemies[currentIndex + 1]};
-            this.gameState = ''battle'';
-            this.battleLog = [''A wild '' + this.currentEnemy.name + '' appears!''];
-            this.currentTurn = ''player'';
-        } else {
-            this.gameState = ''complete'';
-        }
-    },
-
-    get unlockedSkills() {
-        return this.availableSkills.filter(s => s.unlocked);
-    }
-}">
-    <!-- Menu Screen -->
-    <div x-show="gameState === ''menu''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-4xl mx-auto px-8">
-            <div class="mb-12">
-                <h1 class="text-8xl font-bold mb-4 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 bg-clip-text text-transparent">
-                    CODE COMBAT
-                </h1>
-                <p class="text-3xl text-gray-400">Programming RPG Adventure</p>
+            <div class="variable-box">
+                <strong>Was ist eine Variable?</strong><br>
+                Eine Variable ist wie eine Box 📦, in der du Sachen speichern kannst!
             </div>
 
-            <!-- Game Features -->
-            <div class="bg-gray-900 rounded-3xl p-8 mb-8">
-                <div class="grid md:grid-cols-3 gap-6">
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <div class="text-4xl mb-3">⚔️</div>
-                        <h3 class="text-xl font-bold mb-2">Battle with Code</h3>
-                        <p class="text-sm text-gray-400">Use programming skills as spells</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <div class="text-4xl mb-3">📈</div>
-                        <h3 class="text-xl font-bold mb-2">Level Up</h3>
-                        <p class="text-sm text-gray-400">Gain experience and unlock new abilities</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <div class="text-4xl mb-3">🏆</div>
-                        <h3 class="text-xl font-bold mb-2">Defeat Bugs</h3>
-                        <p class="text-sm text-gray-400">Fight bugs, errors, and code monsters</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Character Creation -->
-            <div class="bg-gray-800 rounded-2xl p-6 mb-8 max-w-md mx-auto">
-                <h3 class="text-xl font-bold mb-4">Choose Your Class</h3>
-                <div class="space-y-3">
-                    <button @click="player.class = ''Frontend Mage''; player.skills = [''basic_attack'']"
-                            :class="player.class === ''Frontend Mage'' ? ''ring-2 ring-blue-500'' : ''''"
-                            class="w-full p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-left">
-                        <span class="text-lg font-bold">🧙‍♂️ Frontend Mage</span>
-                        <p class="text-sm text-gray-400">Master of UI spells and CSS magic</p>
-                    </button>
-                    <button @click="player.class = ''Backend Warrior''; player.skills = [''basic_attack'']"
-                            :class="player.class === ''Backend Warrior'' ? ''ring-2 ring-red-500'' : ''''"
-                            class="w-full p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-left">
-                        <span class="text-lg font-bold">⚔️ Backend Warrior</span>
-                        <p class="text-sm text-gray-400">Database defender and API fighter</p>
-                    </button>
-                    <button @click="player.class = ''Full-Stack Paladin''; player.skills = [''basic_attack'']"
-                            :class="player.class === ''Full-Stack Paladin'' ? ''ring-2 ring-yellow-500'' : ''''"
-                            class="w-full p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition text-left">
-                        <span class="text-lg font-bold">🛡️ Full-Stack Paladin</span>
-                        <p class="text-sm text-gray-400">Balanced fighter with diverse skills</p>
-                    </button>
-                </div>
-            </div>
-
-            <button @click="startBattle"
-                    class="px-12 py-6 bg-gradient-to-r from-red-600 to-orange-600 rounded-full text-3xl font-bold hover:scale-110 transform transition">
-                Start Adventure! ⚔️
+            <button onclick="zeigeHilfe('var-hilfe')" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Ich brauche Hilfe!
             </button>
-        </div>
-    </div>
 
-    <!-- Battle Screen -->
-    <div x-show="gameState === ''battle''" x-transition class="min-h-screen p-8">
-        <div class="max-w-6xl mx-auto">
-            <!-- Battle Arena -->
-            <div class="grid md:grid-cols-2 gap-8 mb-8">
-                <!-- Player Side -->
-                <div class="bg-gray-800 rounded-2xl p-6">
-                    <h3 class="text-xl font-bold mb-4">
-                        <span x-text="player.name"></span>
-                        <span class="text-sm text-gray-400">(Lv.<span x-text="player.level"></span> <span x-text="player.class"></span>)</span>
-                    </h3>
-
-                    <!-- HP Bar -->
-                    <div class="mb-3">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>HP</span>
-                            <span><span x-text="player.hp"></span>/<span x-text="player.maxHp"></span></span>
-                        </div>
-                        <div class="bg-gray-700 rounded-full h-4">
-                            <div class="bg-red-500 h-full rounded-full transition-all duration-300"
-                                 :style="`width: ${(player.hp / player.maxHp) * 100}%`"></div>
-                        </div>
-                    </div>
-
-                    <!-- MP Bar -->
-                    <div class="mb-4">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>MP</span>
-                            <span><span x-text="player.mp"></span>/<span x-text="player.maxMp"></span></span>
-                        </div>
-                        <div class="bg-gray-700 rounded-full h-4">
-                            <div class="bg-blue-500 h-full rounded-full transition-all duration-300"
-                                 :style="`width: ${(player.mp / player.maxMp) * 100}%`"></div>
-                        </div>
-                    </div>
-
-                    <!-- Player Avatar -->
-                    <div class="text-center">
-                        <div class="text-8xl mb-4">🧙‍♂️</div>
-                    </div>
+            <div class="hilfe-bereich" id="var-hilfe">
+                <p><strong>So erstellst du Variablen:</strong></p>
+                <div class="code-editor">
+let punkte = 0;  // Speichert die Punkte<br>
+let spielLaeuft = false;  // Ist das Spiel aktiv?<br>
+let zeit = 30;  // Spielzeit in Sekunden
                 </div>
-
-                <!-- Enemy Side -->
-                <div class="bg-gray-800 rounded-2xl p-6">
-                    <h3 class="text-xl font-bold mb-4" x-text="currentEnemy?.name"></h3>
-
-                    <!-- HP Bar -->
-                    <div class="mb-4">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span>HP</span>
-                            <span><span x-text="currentEnemy?.hp"></span>/<span x-text="currentEnemy?.maxHp"></span></span>
-                        </div>
-                        <div class="bg-gray-700 rounded-full h-4">
-                            <div class="bg-red-500 h-full rounded-full transition-all duration-300"
-                                 :style="`width: ${(currentEnemy?.hp / currentEnemy?.maxHp) * 100}%`"></div>
-                        </div>
-                    </div>
-
-                    <!-- Enemy Avatar -->
-                    <div class="text-center">
-                        <div class="text-8xl mb-4" x-text="currentEnemy?.image"></div>
-                        <p class="text-sm text-gray-400">
-                            Weakness: <span class="text-yellow-400" x-text="currentEnemy?.weakness"></span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Battle Log -->
-            <div class="bg-gray-900 rounded-xl p-4 mb-6 h-32 overflow-y-auto">
-                <h4 class="text-sm font-bold text-gray-400 mb-2">Battle Log</h4>
-                <div class="space-y-1">
-                    <template x-for="log in battleLog" :key="log">
-                        <p class="text-sm" x-text="log"></p>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Action Panel -->
-            <div class="bg-gray-800 rounded-2xl p-6">
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Skills -->
-                    <div>
-                        <h3 class="text-lg font-bold mb-3">Skills</h3>
-                        <div class="grid grid-cols-2 gap-3">
-                            <template x-for="skill in unlockedSkills" :key="skill.id">
-                                <button @click="useSkill(skill)"
-                                        :disabled="currentTurn !== ''player'' || player.mp < skill.mpCost"
-                                        :class="currentTurn !== ''player'' || player.mp < skill.mpCost ? ''opacity-50 cursor-not-allowed'' : ''hover:bg-gray-600''"
-                                        class="bg-gray-700 rounded-lg p-3 text-left transition">
-                                    <div class="font-semibold" x-text="skill.name"></div>
-                                    <div class="text-xs text-gray-400">
-                                        MP: <span x-text="skill.mpCost"></span>
-                                    </div>
-                                    <div class="text-xs text-blue-400 font-mono mt-1" x-text="skill.code"></div>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Items -->
-                    <div>
-                        <h3 class="text-lg font-bold mb-3">Items</h3>
-                        <div class="space-y-2">
-                            <button @click="useItem(''potions'')"
-                                    :disabled="currentTurn !== ''player'' || inventory.potions <= 0"
-                                    :class="currentTurn !== ''player'' || inventory.potions <= 0 ? ''opacity-50 cursor-not-allowed'' : ''hover:bg-gray-600''"
-                                    class="w-full bg-gray-700 rounded-lg p-3 text-left transition flex justify-between">
-                                <span>🧪 Potion</span>
-                                <span x-text="inventory.potions"></span>
-                            </button>
-                            <button @click="useItem(''ethers'')"
-                                    :disabled="currentTurn !== ''player'' || inventory.ethers <= 0"
-                                    :class="currentTurn !== ''player'' || inventory.ethers <= 0 ? ''opacity-50 cursor-not-allowed'' : ''hover:bg-gray-600''"
-                                    class="w-full bg-gray-700 rounded-lg p-3 text-left transition flex justify-between">
-                                <span>💙 Ether</span>
-                                <span x-text="inventory.ethers"></span>
-                            </button>
-                            <button @click="useItem(''debuggers'')"
-                                    :disabled="currentTurn !== ''player'' || inventory.debuggers <= 0"
-                                    :class="currentTurn !== ''player'' || inventory.debuggers <= 0 ? ''opacity-50 cursor-not-allowed'' : ''hover:bg-gray-600''"
-                                    class="w-full bg-gray-700 rounded-lg p-3 text-left transition flex justify-between">
-                                <span>🔍 Debugger</span>
-                                <span x-text="inventory.debuggers"></span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <p>Frage die KI: "Wie erstelle ich eine Variable für Punkte in JavaScript?"</p>
             </div>
         </div>
-    </div>
 
-    <!-- Victory Screen -->
-    <div x-show="gameState === ''victory''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">🎉</div>
-                <h1 class="text-5xl font-bold mb-4 text-yellow-400">Victory!</h1>
-                <p class="text-2xl text-gray-400">You defeated <span x-text="currentEnemy?.name"></span>!</p>
+        <!-- Das Spiel -->
+        <div class="spiel-bereich">
+            <div id="punkte-anzeige">Punkte: 0</div>
+            <div id="timer">Zeit: 30</div>
+            <div id="spielfeld">
+                <div id="ziel">🎯</div>
             </div>
+            <button id="start-button">Spiel starten!</button>
+        </div>
 
-            <!-- Rewards -->
-            <div class="bg-gray-800 rounded-2xl p-6 mb-8">
-                <h3 class="text-xl font-bold mb-4">Rewards</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span>Experience</span>
-                        <span class="text-yellow-400">+<span x-text="currentEnemy?.rewards.exp"></span> EXP</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>New Skill</span>
-                        <span class="text-green-400" x-text="currentEnemy?.rewards.skill"></span>
-                    </div>
-                </div>
+        <div class="erfolg" id="erfolg1">
+            ✅ Super! Du hast Variablen gemeistert! Weiter zu Level 2!
+        </div>
 
-                <!-- EXP Bar -->
-                <div class="mt-4">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span>Level <span x-text="player.level"></span></span>
-                        <span><span x-text="player.exp"></span>/<span x-text="player.expToNext"></span> EXP</span>
-                    </div>
-                    <div class="bg-gray-700 rounded-full h-3">
-                        <div class="bg-yellow-500 h-full rounded-full transition-all duration-300"
-                             :style="`width: ${(player.exp / player.expToNext) * 100}%`"></div>
-                    </div>
-                </div>
-            </div>
+        <!-- Level 2: Click Events -->
+        <div class="lern-panel" id="lern2" style="display: none;">
+            <h2>🖱️ Level 2: Click Events - Mach es klickbar!</h2>
+            <p>Jetzt machen wir das Ziel klickbar und zählen Punkte!</p>
 
-            <button @click="nextBattle"
-                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-xl">
-                Next Battle →
+            <button onclick="zeigeHilfe('click-hilfe')" style="background: #ff9800; color: white; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Zeig mir wie!
             </button>
-        </div>
-    </div>
 
-    <!-- Defeat Screen -->
-    <div x-show="gameState === ''defeat''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">💀</div>
-                <h1 class="text-5xl font-bold mb-4 text-red-500">Defeated...</h1>
-                <p class="text-2xl text-gray-400">The bugs were too strong!</p>
-            </div>
-
-            <button @click="gameState = ''menu''; player.hp = player.maxHp; player.mp = player.maxMp"
-                    class="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-xl">
-                Try Again
-            </button>
-        </div>
-    </div>
-
-    <!-- Complete Screen -->
-    <div x-show="gameState === ''complete''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-2xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">👑</div>
-                <h1 class="text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-                    Code Champion!
-                </h1>
-                <p class="text-2xl text-gray-400">You''ve mastered the art of Code Combat!</p>
-            </div>
-
-            <div class="bg-gray-800 rounded-2xl p-8 mb-8">
-                <h3 class="text-2xl font-bold mb-4">Final Stats</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-gray-400">Level</p>
-                        <p class="text-3xl font-bold" x-text="player.level"></p>
-                    </div>
-                    <div>
-                        <p class="text-gray-400">Skills Unlocked</p>
-                        <p class="text-3xl font-bold" x-text="unlockedSkills.length"></p>
-                    </div>
+            <div class="hilfe-bereich" id="click-hilfe">
+                <p><strong>Click Events in JavaScript:</strong></p>
+                <div class="code-editor">
+// Element finden<br>
+const ziel = document.getElementById('ziel');<br><br>
+// Click Event hinzufügen<br>
+ziel.addEventListener('click', function() {<br>
+&nbsp;&nbsp;punkte = punkte + 1;<br>
+&nbsp;&nbsp;// Zeige neue Punkte an<br>
+});
                 </div>
+                <p>Frage die KI: "Wie füge ich einen Click-Event zu #ziel hinzu?"</p>
             </div>
+        </div>
 
-            <button @click="location.reload()"
-                    class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-bold text-xl">
-                New Game+
-            </button>
+        <!-- Level 3: Bewegung -->
+        <div class="lern-panel" id="lern3" style="display: none;">
+            <h2>🏃 Level 3: Bewegung - Lass das Ziel springen!</h2>
+            <p>Das Ziel soll nach jedem Klick an eine neue Position springen!</p>
+
+            <div class="code-editor">
+function bewegeZiel() {<br>
+&nbsp;&nbsp;// Zufällige Position<br>
+&nbsp;&nbsp;let x = Math.random() * 350;<br>
+&nbsp;&nbsp;let y = Math.random() * 350;<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;ziel.style.left = x + 'px';<br>
+&nbsp;&nbsp;ziel.style.top = y + 'px';<br>
+}
+            </div>
+        </div>
+
+        <!-- Level 4: Timer -->
+        <div class="lern-panel" id="lern4" style="display: none;">
+            <h2>⏱️ Level 4: Timer - Zeitdruck macht Spaß!</h2>
+            <p>Füge einen Countdown hinzu! Das Spiel endet nach 30 Sekunden!</p>
+
+            <div class="code-editor">
+setInterval(function() {<br>
+&nbsp;&nbsp;zeit = zeit - 1;<br>
+&nbsp;&nbsp;// Zeige Zeit an<br>
+&nbsp;&nbsp;if (zeit <= 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Spiel beenden<br>
+&nbsp;&nbsp;}<br>
+}, 1000); // Jede Sekunde
+            </div>
+        </div>
+
+        <!-- Werkzeugkiste -->
+        <div class="werkzeugkiste">
+            <div class="werkzeug-karte" onclick="erklaereKonzept('variablen')">
+                <h3>📦 Variablen</h3>
+                <p>Speichere Werte</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaereKonzept('funktionen')">
+                <h3>⚙️ Funktionen</h3>
+                <p>Wiederverwendbarer Code</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaereKonzept('events')">
+                <h3>🖱️ Events</h3>
+                <p>Reagiere auf Aktionen</p>
+            </div>
+            <div class="werkzeug-karte" onclick="erklaereKonzept('bedingungen')">
+                <h3>🔀 If/Else</h3>
+                <p>Entscheidungen treffen</p>
+            </div>
+        </div>
+
+        <!-- Bonus Bereich -->
+        <div class="lern-panel" id="bonus" style="display: none; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h2>🏆 Glückwunsch! Du hast dein erstes Spiel gebaut!</h2>
+            <p><strong>Was du gelernt hast:</strong></p>
+            <ul>
+                <li>✅ Variablen erstellen und nutzen</li>
+                <li>✅ Click-Events programmieren</li>
+                <li>✅ Elemente bewegen</li>
+                <li>✅ Timer und Spiellogik</li>
+            </ul>
+            <p><strong>Nächste Ideen:</strong></p>
+            <ul>
+                <li>🎨 Verschiedene Ziele mit unterschiedlichen Punkten</li>
+                <li>🚀 Power-Ups die doppelte Punkte geben</li>
+                <li>📈 Highscore speichern</li>
+                <li>🎵 Sounds hinzufügen</li>
+            </ul>
         </div>
     </div>
+
+    <script>
+        // Spiel-Variablen (werden vom Schüler erstellt)
+        let punkte = 0;
+        let zeit = 30;
+        let spielLaeuft = false;
+        let timerInterval;
+
+        // Hilfsfunktionen
+        function zeigeHilfe(id) {
+            const hilfe = document.getElementById(id);
+            hilfe.style.display = hilfe.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function erklaereKonzept(konzept) {
+            const erklaerungen = {
+                'variablen': 'Variablen:\n\nSpeichere Daten!\n\nlet punkte = 0;\nlet name = "Max";\nlet spielAktiv = true;\n\nVariablen können Zahlen, Texte oder Wahrheitswerte speichern!',
+                'funktionen': 'Funktionen:\n\nCode-Bausteine die du wiederverwenden kannst!\n\nfunction sagHallo() {\n  alert("Hallo!");\n}\n\nsagHallo(); // Rufe die Funktion auf',
+                'events': 'Events:\n\nReagiere auf Benutzeraktionen!\n\nclick - Mausklick\nkeypress - Tastendruck\nmouseover - Maus drüber\n\nelement.addEventListener("click", machEtwas);',
+                'bedingungen': 'If/Else:\n\nTreffe Entscheidungen!\n\nif (punkte > 10) {\n  alert("Super!");\n} else {\n  alert("Weiter so!");\n}\n\nPrüfe Bedingungen und führe verschiedenen Code aus!'
+            };
+
+            alert('📚 ' + konzept.toUpperCase() + '\n\n' + erklaerungen[konzept]);
+        }
+
+        // Level-System
+        function aktiviereLevel(level) {
+            document.getElementById('level' + level).classList.add('aktiv');
+
+            // Zeige entsprechenden Lerninhalt
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById('lern' + i).style.display = i === level ? 'block' : 'none';
+            }
+
+            if (level === 1) {
+                pruefeVariablen();
+            }
+        }
+
+        // Prüfe ob Variablen erstellt wurden
+        function pruefeVariablen() {
+            // Simuliere Erfolg nach einiger Zeit
+            setTimeout(() => {
+                if (typeof punkte !== 'undefined') {
+                    document.getElementById('erfolg1').style.display = 'block';
+                    setTimeout(() => aktiviereLevel(2), 2000);
+                }
+            }, 3000);
+        }
+
+        // Start-Button Funktionalität (wird vom Schüler programmiert)
+        document.getElementById('start-button').addEventListener('click', function() {
+            // Der Schüler soll hier Code hinzufügen
+            console.log('Start-Button wurde geklickt!');
+
+            // Beispiel-Implementation (normalerweise vom Schüler)
+            spielLaeuft = true;
+            punkte = 0;
+            zeit = 30;
+            document.getElementById('ziel').style.display = 'block';
+            bewegeZiel();
+            starteTimer();
+        });
+
+        // Ziel-Click (wird vom Schüler programmiert)
+        document.getElementById('ziel').addEventListener('click', function() {
+            if (spielLaeuft) {
+                punkte++;
+                document.getElementById('punkte-anzeige').textContent = 'Punkte: ' + punkte;
+                bewegeZiel();
+
+                // Aktiviere nächstes Level
+                if (punkte === 1) aktiviereLevel(3);
+                if (punkte === 5) aktiviereLevel(4);
+                if (punkte === 10) {
+                    document.getElementById('bonus').style.display = 'block';
+                }
+            }
+        });
+
+        // Hilfsfunktionen für das Spiel
+        function bewegeZiel() {
+            const spielfeld = document.getElementById('spielfeld');
+            const maxX = spielfeld.offsetWidth - 50;
+            const maxY = spielfeld.offsetHeight - 50;
+
+            const x = Math.random() * maxX;
+            const y = Math.random() * maxY;
+
+            document.getElementById('ziel').style.left = x + 'px';
+            document.getElementById('ziel').style.top = y + 'px';
+        }
+
+        function starteTimer() {
+            timerInterval = setInterval(function() {
+                zeit--;
+                document.getElementById('timer').textContent = 'Zeit: ' + zeit;
+
+                if (zeit <= 0) {
+                    beendeSpiel();
+                }
+            }, 1000);
+        }
+
+        function beendeSpiel() {
+            spielLaeuft = false;
+            clearInterval(timerInterval);
+            document.getElementById('ziel').style.display = 'none';
+            alert('Spiel vorbei! Du hast ' + punkte + ' Punkte erreicht!');
+        }
+
+        // Starte mit Level 1
+        aktiviereLevel(1);
+    </script>
 </body>
-</html>', '', '', 'gamified', true, 4, '{"level": 3, "duration": "20-30 min", "skills": ["Programming", "Problem Solving", "RPG Mechanics"]}'),
+</html>$$, '', '', 'gamified', true, 5, '{"level": 2, "duration": "30-35 min", "skills": ["JavaScript Basics", "Variables", "Events", "Functions"], "age": "10-14"}'),
 
--- Template 5: Final Boss - Launch Day
-('🚀 Final Boss: Launch Day', 'Der ultimative Test - Launche dein eigenes Projekt!',
-'<!DOCTYPE html>
+-- Template 6: Animations-Zauberei
+('06 - Animations-Zauberei', 'Erwecke deine Website mit CSS-Animationen zum Leben! 🌈',
+$$<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Final Boss: Launch Day</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <title>Animations-Zauberei</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f0f23;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .zauber-akademie {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .titel {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .titel h1 {
+            font-size: 3em;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            /* Aufgabe: Animiere mich! */
+        }
+
+        .zauber-labor {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Animations-Objekte */
+        .ball {
+            width: 60px;
+            height: 60px;
+            background: #ff4757;
+            border-radius: 50%;
+            margin: 20px;
+            /* Aufgabe 1: Lass mich hüpfen! */
+        }
+
+        .stern {
+            font-size: 50px;
+            display: inline-block;
+            margin: 20px;
+            /* Aufgabe 2: Lass mich drehen! */
+        }
+
+        .box {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #3498db, #2ecc71);
+            margin: 20px;
+            /* Aufgabe 3: Morphe mich! */
+        }
+
+        .zauberstab {
+            display: inline-block;
+            font-size: 40px;
+            cursor: pointer;
+            /* Aufgabe 4: Schüttle mich bei Hover! */
+        }
+
+        .lern-karte {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .code-zauber {
+            background: #1a1a2e;
+            border: 1px solid #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-zauber::before {
+            content: '✨';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+        }
+
+        .animations-galerie {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .galerie-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .galerie-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .hilfe-zauberbuch {
+            background: rgba(138, 43, 226, 0.2);
+            border: 2px solid rgba(138, 43, 226, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .fortschritts-sterne {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .erfolgs-feuerwerk {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 100px;
+            display: none;
+            animation: feuerwerk 1s ease;
+        }
+
+        @keyframes feuerwerk {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(360deg); opacity: 0; }
+        }
+
+        /* Beispiel-Animationen */
+        @keyframes regenbogen {
+            0% { color: red; }
+            16% { color: orange; }
+            33% { color: yellow; }
+            50% { color: green; }
+            66% { color: blue; }
+            83% { color: indigo; }
+            100% { color: violet; }
+        }
+
+        .magie-button {
+            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+            background-size: 300% 300%;
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .magie-button:hover {
+            animation: farbwechsel 3s ease infinite;
+        }
+
+        @keyframes farbwechsel {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .zauber-partikel {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
 </head>
-<body class="bg-black text-white min-h-screen" x-data="{
-    // Game phases
-    currentPhase: ''intro'', // intro, planning, building, testing, launch, success
+<body>
+    <div class="fortschritts-sterne">
+        <div>🌟 Level: <span id="level">1</span>/5</div>
+        <div>✨ Zauber: <span id="zauber-punkte">0</span></div>
+    </div>
 
-    // Project data
-    project: {
-        name: '''',
-        type: '''',
-        features: [],
-        techStack: [],
-        design: {
-            style: '''',
-            primaryColor: '''',
-            darkMode: false
-        }
-    },
+    <div class="zauber-akademie">
+        <div class="titel">
+            <h1 id="animierter-titel">🪄 Animations-Zauberei 🪄</h1>
+            <p>Erwecke deine Website mit magischen CSS-Animationen zum Leben!</p>
+        </div>
 
-    // Progress tracking
-    progress: {
-        planning: 0,
-        development: 0,
-        testing: 0,
-        deployment: 0
-    },
+        <!-- Level 1: Transitions -->
+        <div class="lern-karte">
+            <h2>📚 Lektion 1: Transition-Zauber</h2>
+            <p>Transitions machen Änderungen smooth und magisch!</p>
 
-    // Challenges to overcome
-    challenges: {
-        bugs: 5,
-        performance: 3,
-        responsive: 4,
-        accessibility: 3
-    },
-
-    // Resources
-    resources: {
-        time: 100,
-        energy: 100,
-        motivation: 100
-    },
-
-    // Skills from previous levels
-    unlockedSkills: [
-        ''HTML Mastery'',
-        ''CSS Wizardry'',
-        ''JavaScript Ninja'',
-        ''Design Psychology'',
-        ''Interaction Expert''
-    ],
-
-    // Launch metrics
-    launchMetrics: {
-        users: 0,
-        rating: 0,
-        feedback: []
-    },
-
-    // Available project types
-    projectTypes: [
-        { id: ''portfolio'', name: ''Portfolio Website'', icon: ''💼'', difficulty: ''medium'' },
-        { id: ''ecommerce'', name: ''Online Shop'', icon: ''🛍️'', difficulty: ''hard'' },
-        { id: ''social'', name: ''Social Platform'', icon: ''💬'', difficulty: ''very hard'' },
-        { id: ''game'', name: ''Web Game'', icon: ''🎮'', difficulty: ''hard'' },
-        { id: ''saas'', name: ''SaaS Tool'', icon: ''⚡'', difficulty: ''very hard'' },
-        { id: ''blog'', name: ''Blog Platform'', icon: ''📝'', difficulty: ''easy'' }
-    ],
-
-    // Tech stack options
-    techOptions: {
-        frontend: [''React'', ''Vue'', ''Alpine.js'', ''Vanilla JS''],
-        styling: [''Tailwind'', ''Bootstrap'', ''Custom CSS'', ''Styled Components''],
-        backend: [''Node.js'', ''Firebase'', ''Supabase'', ''Static''],
-        database: [''PostgreSQL'', ''MongoDB'', ''LocalStorage'', ''None'']
-    },
-
-    // Methods
-    startPlanning() {
-        this.currentPhase = ''planning'';
-    },
-
-    selectProjectType(type) {
-        this.project.type = type;
-        this.progress.planning += 25;
-    },
-
-    addFeature(feature) {
-        if (this.project.features.length < 5) {
-            this.project.features.push(feature);
-            this.progress.planning += 15;
-            this.resources.time -= 5;
-        }
-    },
-
-    selectTech(category, tech) {
-        this.project.techStack.push({ category, tech });
-        this.progress.planning += 10;
-    },
-
-    startBuilding() {
-        if (this.progress.planning >= 60) {
-            this.currentPhase = ''building'';
-            this.simulateBuilding();
-        }
-    },
-
-    simulateBuilding() {
-        const buildInterval = setInterval(() => {
-            if (this.progress.development < 100 && this.resources.energy > 0) {
-                this.progress.development += 5;
-                this.resources.energy -= 2;
-                this.resources.time -= 1;
-
-                // Random challenges appear
-                if (Math.random() < 0.1) {
-                    this.showChallenge();
-                }
-            } else {
-                clearInterval(buildInterval);
-                if (this.progress.development >= 100) {
-                    this.currentPhase = ''testing'';
-                }
-            }
-        }, 500);
-    },
-
-    showChallenge() {
-        // Random bug or issue appears
-        const challengeTypes = Object.keys(this.challenges);
-        const challenge = challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
-        console.log(`New ${challenge} challenge!`);
-    },
-
-    fixBug(type) {
-        if (this.challenges[type] > 0) {
-            this.challenges[type]--;
-            this.progress.testing += 10;
-            this.resources.energy -= 5;
-        }
-    },
-
-    startTesting() {
-        this.currentPhase = ''testing'';
-    },
-
-    deployProject() {
-        if (this.progress.testing >= 80) {
-            this.currentPhase = ''launch'';
-            this.simulateLaunch();
-        }
-    },
-
-    simulateLaunch() {
-        // Simulate user growth
-        let userGrowth = setInterval(() => {
-            this.launchMetrics.users += Math.floor(Math.random() * 50) + 10;
-            this.launchMetrics.rating = Math.min(5, this.launchMetrics.rating + 0.1);
-
-            if (this.launchMetrics.users >= 1000) {
-                clearInterval(userGrowth);
-                this.currentPhase = ''success'';
-            }
-        }, 300);
-
-        // Generate feedback
-        const feedbackOptions = [
-            ''Amazing design! 🎨'',
-            ''Super fast and responsive! ⚡'',
-            ''Love the user experience! 💖'',
-            ''This is exactly what I needed! 🎯'',
-            ''Incredible work! 🚀''
-        ];
-
-        setInterval(() => {
-            if (this.launchMetrics.feedback.length < 10) {
-                this.launchMetrics.feedback.push(
-                    feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)]
-                );
-            }
-        }, 1000);
-    },
-
-    get overallProgress() {
-        return (this.progress.planning + this.progress.development + this.progress.testing + this.progress.deployment) / 4;
-    },
-
-    get totalChallenges() {
-        return Object.values(this.challenges).reduce((a, b) => a + b, 0);
-    }
-}">
-    <!-- Intro Phase -->
-    <div x-show="currentPhase === ''intro''" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-4xl mx-auto px-8">
-            <div class="mb-12">
-                <h1 class="text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent animate-pulse">
-                    FINAL BOSS: LAUNCH DAY
-                </h1>
-                <p class="text-2xl text-gray-400 mb-8">The Ultimate Web Developer Challenge</p>
-            </div>
-
-            <div class="bg-gray-900 rounded-3xl p-8 mb-8 backdrop-blur-lg bg-opacity-80">
-                <h2 class="text-3xl font-bold mb-6 text-yellow-400">🎯 Your Mission</h2>
-                <p class="text-xl mb-6">
-                    Use everything you''ve learned to plan, build, test, and launch a real project!
-                </p>
-
-                <div class="grid md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">📋</div>
-                        <h3 class="font-bold">Plan</h3>
-                        <p class="text-sm text-gray-400">Choose your project</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">🛠️</div>
-                        <h3 class="font-bold">Build</h3>
-                        <p class="text-sm text-gray-400">Code your vision</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">🧪</div>
-                        <h3 class="font-bold">Test</h3>
-                        <p class="text-sm text-gray-400">Fix all issues</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-4">
-                        <div class="text-3xl mb-2">🚀</div>
-                        <h3 class="font-bold">Launch</h3>
-                        <p class="text-sm text-gray-400">Go live!</p>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <h3 class="text-xl font-bold mb-4">Your Unlocked Skills</h3>
-                    <div class="flex flex-wrap gap-2 justify-center">
-                        <template x-for="skill in unlockedSkills" :key="skill">
-                            <span class="bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-1 rounded-full text-sm">
-                                ✅ <span x-text="skill"></span>
-                            </span>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <button @click="startPlanning"
-                    class="px-12 py-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full text-3xl font-bold hover:scale-110 transform transition animate-bounce">
-                Accept Challenge! 🚀
+            <button onclick="zeigeZauberbuch('transition-hilfe')" class="magie-button">
+                📖 Öffne Zauberbuch
             </button>
-        </div>
-    </div>
 
-    <!-- Planning Phase -->
-    <div x-show="currentPhase === ''planning''" x-transition class="min-h-screen p-8">
-        <div class="max-w-6xl mx-auto">
-            <!-- Progress Header -->
-            <div class="mb-8">
-                <h2 class="text-4xl font-bold mb-4">📋 Planning Phase</h2>
-                <div class="bg-gray-800 rounded-full h-4">
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-500"
-                         :style="`width: ${progress.planning}%`"></div>
+            <div class="hilfe-zauberbuch" id="transition-hilfe">
+                <p><strong>Der Transition-Zauberspruch:</strong></p>
+                <div class="code-zauber">
+transition: all 0.3s ease;<br>
+/* oder spezifisch: */<br>
+transition: transform 0.5s ease-in-out;<br>
+transition: background-color 1s linear;
                 </div>
-                <p class="text-sm text-gray-400 mt-2">Planning Progress: <span x-text="progress.planning"></span>%</p>
+                <p>💡 Frage die KI: "Wie füge ich eine smooth transition zu hover-Effekten hinzu?"</p>
             </div>
 
-            <!-- Project Type Selection -->
-            <div class="mb-8" x-show="!project.type">
-                <h3 class="text-2xl font-bold mb-4">Choose Your Project Type</h3>
-                <div class="grid md:grid-cols-3 gap-4">
-                    <template x-for="type in projectTypes" :key="type.id">
-                        <button @click="selectProjectType(type.id)"
-                                class="bg-gray-800 hover:bg-gray-700 rounded-xl p-6 text-left transition transform hover:scale-105">
-                            <div class="text-4xl mb-3" x-text="type.icon"></div>
-                            <h4 class="text-xl font-bold mb-2" x-text="type.name"></h4>
-                            <p class="text-sm text-gray-400">Difficulty: <span x-text="type.difficulty"></span></p>
-                        </button>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Feature Selection -->
-            <div class="mb-8" x-show="project.type && project.features.length < 5">
-                <h3 class="text-2xl font-bold mb-4">Select Features (Max 5)</h3>
-                <div class="grid md:grid-cols-4 gap-3">
-                    <button @click="addFeature('User Authentication')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        🔐 User Auth
-                    </button>
-                    <button @click="addFeature('Real-time Updates')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        ⚡ Real-time
-                    </button>
-                    <button @click="addFeature('Dark Mode')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        🌙 Dark Mode
-                    </button>
-                    <button @click="addFeature('Mobile App')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        📱 Mobile App
-                    </button>
-                    <button @click="addFeature('Analytics')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        📊 Analytics
-                    </button>
-                    <button @click="addFeature('Social Sharing')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        🔗 Social Share
-                    </button>
-                    <button @click="addFeature('Payment System')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        💳 Payments
-                    </button>
-                    <button @click="addFeature('AI Features')"
-                            class="bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition">
-                        🤖 AI Features
-                    </button>
-                </div>
-                <div class="mt-4">
-                    <p class="text-sm text-gray-400">Selected Features:</p>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        <template x-for="feature in project.features" :key="feature">
-                            <span class="bg-blue-600 px-3 py-1 rounded-full text-sm" x-text="feature"></span>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tech Stack Selection -->
-            <div class="mb-8" x-show="project.type">
-                <h3 class="text-2xl font-bold mb-4">Choose Your Tech Stack</h3>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <template x-for="(options, category) in techOptions" :key="category">
-                        <div class="bg-gray-800 rounded-xl p-6">
-                            <h4 class="font-bold mb-3 capitalize" x-text="category"></h4>
-                            <div class="grid grid-cols-2 gap-2">
-                                <template x-for="tech in options" :key="tech">
-                                    <button @click="selectTech(category, tech)"
-                                            class="bg-gray-700 hover:bg-gray-600 rounded px-3 py-2 text-sm transition">
-                                        <span x-text="tech"></span>
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Start Building Button -->
-            <div class="text-center mt-8">
-                <button @click="startBuilding"
-                        :disabled="progress.planning < 60"
-                        :class="progress.planning >= 60 ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 opacity-50 cursor-not-allowed'"
-                        class="px-8 py-4 rounded-full text-xl font-bold transition">
-                    Start Building! 🛠️
-                </button>
-                <p x-show="progress.planning < 60" class="text-sm text-gray-400 mt-2">
-                    Complete more planning tasks to continue
-                </p>
+            <div class="zauber-labor">
+                <p>Aufgabe: Gib dem Zauberstab einen magischen Hover-Effekt!</p>
+                <div class="zauberstab">🪄</div>
             </div>
         </div>
-    </div>
 
-    <!-- Building Phase -->
-    <div x-show="currentPhase === 'building'" x-transition class="min-h-screen p-8">
-        <div class="max-w-6xl mx-auto">
-            <h2 class="text-4xl font-bold mb-8">🛠️ Building Phase</h2>
+        <!-- Level 2: Keyframe Animations -->
+        <div class="lern-karte" id="level2" style="display: none;">
+            <h2>📚 Lektion 2: Keyframe-Magie</h2>
+            <p>Mit @keyframes kannst du komplexe Animationen erstellen!</p>
 
-            <!-- Resource Bars -->
-            <div class="grid md:grid-cols-3 gap-4 mb-8">
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="flex justify-between mb-2">
-                        <span>⏱️ Time</span>
-                        <span><span x-text="resources.time"></span>%</span>
-                    </div>
-                    <div class="bg-gray-700 rounded-full h-3">
-                        <div class="bg-blue-500 h-full rounded-full transition-all"
-                             :style="`width: ${resources.time}%`"></div>
-                    </div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="flex justify-between mb-2">
-                        <span>⚡ Energy</span>
-                        <span><span x-text="resources.energy"></span>%</span>
-                    </div>
-                    <div class="bg-gray-700 rounded-full h-3">
-                        <div class="bg-yellow-500 h-full rounded-full transition-all"
-                             :style="`width: ${resources.energy}%`"></div>
-                    </div>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-4">
-                    <div class="flex justify-between mb-2">
-                        <span>💪 Motivation</span>
-                        <span><span x-text="resources.motivation"></span>%</span>
-                    </div>
-                    <div class="bg-gray-700 rounded-full h-3">
-                        <div class="bg-green-500 h-full rounded-full transition-all"
-                             :style="`width: ${resources.motivation}%`"></div>
-                    </div>
-                </div>
+            <div class="code-zauber">
+@keyframes meine-animation {<br>
+&nbsp;&nbsp;0% { /* Start */ }<br>
+&nbsp;&nbsp;50% { /* Mitte */ }<br>
+&nbsp;&nbsp;100% { /* Ende */ }<br>
+}<br><br>
+.element {<br>
+&nbsp;&nbsp;animation: meine-animation 2s infinite;<br>
+}
             </div>
 
-            <!-- Code Editor Simulation -->
-            <div class="bg-gray-900 rounded-2xl p-6 mb-8">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span class="text-sm text-gray-400 ml-4">main.js</span>
-                </div>
+            <div class="zauber-labor">
+                <p>Aufgabe 1: Lass den Ball hüpfen!</p>
+                <div class="ball"></div>
 
-                <div class="font-mono text-sm space-y-2">
-                    <p><span class="text-purple-400">const</span> <span class="text-blue-400">app</span> = <span class="text-yellow-400">createApp</span>({</p>
-                    <p class="ml-4"><span class="text-blue-400">name:</span> <span class="text-green-400">'<span x-text="project.name || 'My Awesome Project'"></span>'</span>,</p>
-                    <p class="ml-4"><span class="text-blue-400">features:</span> [<span class="text-green-400" x-text="project.features.map(f => `'${f}'`).join(', ')"></span>],</p>
-                    <p class="ml-4"><span class="text-blue-400">progress:</span> <span class="text-orange-400" x-text="progress.development"></span>%</p>
-                    <p>});</p>
-                </div>
-            </div>
-
-            <!-- Development Progress -->
-            <div class="bg-gray-800 rounded-xl p-6">
-                <h3 class="text-xl font-bold mb-4">Development Progress</h3>
-                <div class="mb-4">
-                    <div class="bg-gray-700 rounded-full h-6">
-                        <div class="bg-gradient-to-r from-green-500 to-blue-500 h-full rounded-full transition-all duration-500 flex items-center justify-center text-xs font-bold"
-                             :style="`width: ${progress.development}%`">
-                            <span x-show="progress.development > 10" x-text="progress.development + '%'"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div x-show="totalChallenges > 0" class="mt-4 p-4 bg-red-900 bg-opacity-50 rounded-lg">
-                    <p class="font-bold mb-2">⚠️ Active Challenges:</p>
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <div x-show="challenges.bugs > 0">🐛 Bugs: <span x-text="challenges.bugs"></span></div>
-                        <div x-show="challenges.performance > 0">⚡ Performance: <span x-text="challenges.performance"></span></div>
-                        <div x-show="challenges.responsive > 0">📱 Responsive: <span x-text="challenges.responsive"></span></div>
-                        <div x-show="challenges.accessibility > 0">♿ Accessibility: <span x-text="challenges.accessibility"></span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div x-show="progress.development >= 100" class="text-center mt-8">
-                <button @click="startTesting"
-                        class="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-xl font-bold">
-                    Move to Testing! 🧪
-                </button>
+                <p>Aufgabe 2: Lass den Stern rotieren!</p>
+                <div class="stern">⭐</div>
             </div>
         </div>
-    </div>
 
-    <!-- Testing Phase -->
-    <div x-show="currentPhase === 'testing'" x-transition class="min-h-screen p-8">
-        <div class="max-w-6xl mx-auto">
-            <h2 class="text-4xl font-bold mb-8">🧪 Testing Phase</h2>
+        <!-- Level 3: Transform -->
+        <div class="lern-karte" id="level3" style="display: none;">
+            <h2>📚 Lektion 3: Transform-Verwandlung</h2>
+            <p>Verwandle Elemente mit transform!</p>
 
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- Bug Fixing -->
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <h3 class="text-xl font-bold mb-4">Fix Issues</h3>
-                    <div class="space-y-3">
-                        <button @click="fixBug('bugs')"
-                                :disabled="challenges.bugs === 0"
-                                :class="challenges.bugs > 0 ? 'bg-red-700 hover:bg-red-600' : 'bg-gray-700 opacity-50'"
-                                class="w-full p-4 rounded-lg transition flex justify-between items-center">
-                            <span>🐛 Fix Bugs</span>
-                            <span class="text-2xl font-bold" x-text="challenges.bugs"></span>
-                        </button>
-                        <button @click="fixBug('performance')"
-                                :disabled="challenges.performance === 0"
-                                :class="challenges.performance > 0 ? 'bg-yellow-700 hover:bg-yellow-600' : 'bg-gray-700 opacity-50'"
-                                class="w-full p-4 rounded-lg transition flex justify-between items-center">
-                            <span>⚡ Optimize Performance</span>
-                            <span class="text-2xl font-bold" x-text="challenges.performance"></span>
-                        </button>
-                        <button @click="fixBug('responsive')"
-                                :disabled="challenges.responsive === 0"
-                                :class="challenges.responsive > 0 ? 'bg-blue-700 hover:bg-blue-600' : 'bg-gray-700 opacity-50'"
-                                class="w-full p-4 rounded-lg transition flex justify-between items-center">
-                            <span>📱 Fix Responsive Issues</span>
-                            <span class="text-2xl font-bold" x-text="challenges.responsive"></span>
-                        </button>
-                        <button @click="fixBug('accessibility')"
-                                :disabled="challenges.accessibility === 0"
-                                :class="challenges.accessibility > 0 ? 'bg-purple-700 hover:bg-purple-600' : 'bg-gray-700 opacity-50'"
-                                class="w-full p-4 rounded-lg transition flex justify-between items-center">
-                            <span>♿ Improve Accessibility</span>
-                            <span class="text-2xl font-bold" x-text="challenges.accessibility"></span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Test Results -->
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <h3 class="text-xl font-bold mb-4">Test Results</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <p class="text-sm text-gray-400 mb-1">Overall Quality</p>
-                            <div class="bg-gray-700 rounded-full h-4">
-                                <div class="bg-green-500 h-full rounded-full transition-all"
-                                     :style="`width: ${progress.testing}%`"></div>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-900 rounded-lg p-4">
-                            <p class="font-mono text-sm">
-                                <span class="text-green-400">✓ Unit Tests: Passing</span><br>
-                                <span :class="totalChallenges === 0 ? 'text-green-400' : 'text-red-400'">
-                                    <span x-text="totalChallenges === 0 ? '✓' : '✗'"></span> Integration Tests:
-                                    <span x-text="totalChallenges === 0 ? 'Passing' : `${totalChallenges} issues`"></span>
-                                </span><br>
-                                <span :class="challenges.performance === 0 ? 'text-green-400' : 'text-yellow-400'">
-                                    <span x-text="challenges.performance === 0 ? '✓' : '⚠'"></span> Performance:
-                                    <span x-text="challenges.performance === 0 ? 'Optimal' : 'Needs work'"></span>
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            <div class="code-zauber">
+transform: rotate(45deg);<br>
+transform: scale(1.5);<br>
+transform: translateX(100px);<br>
+transform: skew(10deg);<br>
+/* Kombiniere mehrere: */<br>
+transform: rotate(45deg) scale(1.2);
             </div>
 
-            <div x-show="progress.testing >= 80" class="text-center mt-8">
-                <button @click="deployProject"
-                        class="px-8 py-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-full text-xl font-bold hover:scale-110 transition">
-                    Deploy to Production! 🚀
-                </button>
+            <div class="zauber-labor">
+                <p>Aufgabe: Verwandle die Box in einen Kreis und lass sie wachsen!</p>
+                <div class="box"></div>
             </div>
         </div>
-    </div>
 
-    <!-- Launch Phase -->
-    <div x-show="currentPhase === 'launch'" x-transition class="min-h-screen p-8">
-        <div class="max-w-6xl mx-auto text-center">
-            <h2 class="text-5xl font-bold mb-8">🚀 LAUNCH DAY!</h2>
+        <!-- Level 4: Animation Properties -->
+        <div class="lern-karte" id="level4" style="display: none;">
+            <h2>📚 Lektion 4: Animations-Eigenschaften</h2>
+            <p>Meistere die Feinheiten der Animation!</p>
 
-            <!-- Launch Metrics -->
-            <div class="grid md:grid-cols-3 gap-8 mb-8">
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-5xl font-bold text-green-400 mb-2" x-text="launchMetrics.users.toLocaleString()"></div>
-                    <p class="text-gray-400">Active Users</p>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-5xl font-bold text-yellow-400 mb-2">
-                        <span x-text="launchMetrics.rating.toFixed(1)"></span>⭐
-                    </div>
-                    <p class="text-gray-400">User Rating</p>
-                </div>
-                <div class="bg-gray-800 rounded-xl p-6">
-                    <div class="text-5xl font-bold text-purple-400 mb-2" x-text="launchMetrics.feedback.length"></div>
-                    <p class="text-gray-400">Reviews</p>
-                </div>
+            <div class="code-zauber">
+animation-duration: 2s;        /* Dauer */<br>
+animation-delay: 0.5s;         /* Verzögerung */<br>
+animation-iteration-count: infinite; /* Wiederholungen */<br>
+animation-direction: alternate; /* Richtung */<br>
+animation-timing-function: ease-in-out; /* Timing */<br>
+animation-fill-mode: forwards; /* Endposition */
             </div>
-
-            <!-- Live Feed -->
-            <div class="bg-gray-800 rounded-xl p-6 mb-8">
-                <h3 class="text-xl font-bold mb-4">📊 Live User Feedback</h3>
-                <div class="space-y-2 max-h-60 overflow-y-auto">
-                    <template x-for="feedback in launchMetrics.feedback" :key="feedback">
-                        <div class="bg-gray-900 rounded-lg p-3 text-left">
-                            <p x-text="feedback"></p>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <div class="text-6xl mb-4">🎊</div>
-            <p class="text-2xl text-gray-400">Your project is live and growing!</p>
         </div>
-    </div>
 
-    <!-- Success Phase -->
-    <div x-show="currentPhase === 'success'" x-transition
-         class="min-h-screen flex items-center justify-center">
-        <div class="text-center max-w-4xl mx-auto px-8">
-            <div class="mb-8">
-                <div class="text-8xl mb-4">👑</div>
-                <h1 class="text-7xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
-                    LEGENDARY LAUNCH!
-                </h1>
-                <p class="text-3xl text-gray-400 mb-8">You are now a Full-Stack Master!</p>
+        <!-- Animations-Galerie -->
+        <div class="animations-galerie">
+            <div class="galerie-item">
+                <h3>🌊 Wellen</h3>
+                <div style="animation: welle 2s ease-in-out infinite;">~~~~~</div>
             </div>
 
-            <div class="bg-gray-800 rounded-3xl p-8 mb-8">
-                <h3 class="text-2xl font-bold mb-6">🏆 Final Achievement</h3>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <p class="text-gray-400">Project Launched</p>
-                        <p class="text-3xl font-bold text-green-400">Successfully! ✅</p>
-                    </div>
-                    <div>
-                        <p class="text-gray-400">Users Reached</p>
-                        <p class="text-3xl font-bold text-yellow-400" x-text="launchMetrics.users.toLocaleString()"></p>
-                    </div>
+            <div class="galerie-item">
+                <h3>💫 Pulsieren</h3>
+                <div style="animation: puls 1s ease infinite;">●</div>
+            </div>
+
+            <div class="galerie-item">
+                <h3>🌀 Wirbel</h3>
+                <div style="animation: wirbel 3s linear infinite;">🌀</div>
+            </div>
+
+            <div class="galerie-item">
+                <h3>✨ Funkeln</h3>
+                <div style="animation: funkeln 0.5s ease infinite;">✨</div>
+            </div>
+        </div>
+
+        <!-- Bonus: Eigene Animation -->
+        <div class="lern-karte" id="bonus" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h2>🏆 Meister-Aufgabe: Deine eigene Animation!</h2>
+            <p>Erstelle eine eigene, einzigartige Animation!</p>
+
+            <div class="zauber-labor" style="min-height: 200px;">
+                <div id="mein-element" style="width: 100px; height: 100px; background: gold; margin: 50px auto;">
+                    Animiere mich!
                 </div>
             </div>
 
-            <div class="bg-gradient-to-r from-purple-800 to-pink-800 rounded-2xl p-8">
-                <h3 class="text-2xl font-bold mb-4">🎯 Skills Mastered</h3>
-                <div class="flex flex-wrap gap-3 justify-center">
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">Planning & Architecture</span>
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">Full-Stack Development</span>
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">Testing & Debugging</span>
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">Deployment & DevOps</span>
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">User Experience</span>
-                    <span class="bg-white bg-opacity-20 px-4 py-2 rounded-full">Project Management</span>
-                </div>
-            </div>
-
-            <button class="mt-8 px-12 py-6 bg-gradient-to-r from-green-400 to-blue-500 rounded-full text-3xl font-bold hover:scale-110 transform transition">
-                Start Your Next Adventure! 🚀
-            </button>
+            <p>Ideen:</p>
+            <ul>
+                <li>🎭 Morphing zwischen Formen</li>
+                <li>🌈 Regenbogen-Farbverlauf</li>
+                <li>🎪 Zirkus-Animation</li>
+                <li>🚀 Raketen-Start</li>
+            </ul>
         </div>
-    </div>
 
-    <!-- Background Effects -->
-    <div class="fixed inset-0 pointer-events-none -z-10">
-        <div class="absolute top-0 left-0 w-full h-full">
-            <div class="absolute top-20 left-20 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-            <div class="absolute bottom-20 right-20 w-64 h-64 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse animation-delay-2000"></div>
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse animation-delay-4000"></div>
-        </div>
+        <div class="erfolgs-feuerwerk" id="feuerwerk">🎆</div>
     </div>
 
     <style>
-        .animation-delay-2000 {
-            animation-delay: 2s;
+        /* Zusätzliche Animationen für die Galerie */
+        @keyframes welle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
-        .animation-delay-4000 {
-            animation-delay: 4s;
+        @keyframes puls {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        @keyframes wirbel {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes funkeln {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.8); }
         }
     </style>
+
+    <script>
+        let aktuellesLevel = 1;
+        let zauberPunkte = 0;
+
+        function zeigeZauberbuch(id) {
+            const buch = document.getElementById(id);
+            buch.style.display = buch.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function erhoeheZauberPunkte(punkte) {
+            zauberPunkte += punkte;
+            document.getElementById('zauber-punkte').textContent = zauberPunkte;
+
+            // Zeige Feuerwerk
+            const feuerwerk = document.getElementById('feuerwerk');
+            feuerwerk.style.display = 'block';
+            setTimeout(() => feuerwerk.style.display = 'none', 1000);
+        }
+
+        function naechstesLevel() {
+            aktuellesLevel++;
+            document.getElementById('level').textContent = aktuellesLevel;
+
+            // Zeige nächstes Level
+            if (aktuellesLevel <= 4) {
+                document.getElementById('level' + aktuellesLevel).style.display = 'block';
+            } else {
+                document.getElementById('bonus').style.display = 'block';
+            }
+        }
+
+        // Prüfe Animationen
+        function pruefeAnimationen() {
+            // Prüfe Zauberstab Hover
+            const zauberstab = document.querySelector('.zauberstab');
+            if (getComputedStyle(zauberstab).transition !== 'none') {
+                erhoeheZauberPunkte(10);
+                setTimeout(naechstesLevel, 1000);
+            }
+
+            // Weitere Prüfungen für andere Elemente...
+        }
+
+        // Erstelle magische Partikel bei Mausbewegung
+        document.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.95) {
+                const partikel = document.createElement('div');
+                partikel.className = 'zauber-partikel';
+                partikel.style.left = e.pageX + 'px';
+                partikel.style.top = e.pageY + 'px';
+                document.body.appendChild(partikel);
+
+                // Animiere Partikel
+                partikel.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${Math.random() * 100 - 50}px, ${Math.random() * 100}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 1000,
+                    easing: 'ease-out'
+                }).onfinish = () => partikel.remove();
+            }
+        });
+
+        // Easter Egg: Geheime Animation
+        let klickZaehler = 0;
+        document.getElementById('animierter-titel').addEventListener('click', () => {
+            klickZaehler++;
+            if (klickZaehler === 5) {
+                document.getElementById('animierter-titel').style.animation = 'regenbogen 2s linear infinite';
+                alert('🌈 Geheime Regenbogen-Animation aktiviert!');
+                erhoeheZauberPunkte(50);
+            }
+        });
+
+        // Überwache Änderungen
+        setInterval(pruefeAnimationen, 1000);
+    </script>
 </body>
-</html>', '', '', 'gamified', true, 5, '{"level": 5, "duration": "30-45 min", "skills": ["Project Management", "Full-Stack", "Deployment", "Testing"]}');
+</html>$$, '', '', 'gamified', true, 6, '{"level": 3, "duration": "30-35 min", "skills": ["CSS Animations", "Transitions", "Keyframes", "Transform"], "age": "10-14"}'),
+
+-- Template 7: Mobile-First Design
+('07 - Mobile-First Design', 'Gestalte Websites die auf jedem Gerät super aussehen! 📱',
+$$<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile-First Design</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .device-simulator {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+
+        .device-frame {
+            background: #222;
+            border-radius: 35px;
+            padding: 15px;
+            margin: 20px auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .device-frame.phone {
+            width: 375px;
+            height: 667px;
+        }
+
+        .device-frame.tablet {
+            width: 768px;
+            height: 1024px;
+        }
+
+        .device-frame.desktop {
+            width: 100%;
+            max-width: 1200px;
+            height: 700px;
+        }
+
+        .device-screen {
+            background: white;
+            height: 100%;
+            border-radius: 20px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Die zu bearbeitende Website */
+        .meine-website {
+            padding: 20px;
+        }
+
+        .navigation {
+            background: #333;
+            color: white;
+            padding: 15px;
+            /* Aufgabe 1: Mache mich responsive! */
+        }
+
+        .nav-liste {
+            list-style: none;
+            /* Aufgabe: Bei Desktop nebeneinander, bei Mobile untereinander */
+        }
+
+        .hero-bereich {
+            background: #e3f2fd;
+            padding: 40px 20px;
+            text-align: center;
+            /* Aufgabe 2: Passe die Schriftgröße an! */
+        }
+
+        .hero-titel {
+            font-size: 48px;
+            /* Problem: Zu groß für Mobile! */
+        }
+
+        .produkt-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 40px 0;
+            /* Aufgabe 3: Mache das Grid responsive! */
+        }
+
+        .produkt-karte {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Steuerung */
+        .geraete-auswahl {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .geraet-button {
+            background: white;
+            border: 2px solid #667eea;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .geraet-button.aktiv {
+            background: #667eea;
+            color: white;
+        }
+
+        .lern-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .code-beispiel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .hilfe-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .erfolg-nachricht {
+            background: #4caf50;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .viewport-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            font-family: monospace;
+        }
+
+        .werkzeugkasten {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .werkzeug {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .werkzeug:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        /* Beispiel Media Queries */
+        @media (max-width: 768px) {
+            /* Tablet und kleiner */
+        }
+
+        @media (max-width: 480px) {
+            /* Smartphone */
+        }
+    </style>
+</head>
+<body>
+    <div class="device-simulator">
+        <div class="header">
+            <h1>📱 Mobile-First Design Workshop</h1>
+            <p>Lerne, wie man Websites für alle Bildschirmgrößen optimiert!</p>
+        </div>
+
+        <div class="geraete-auswahl">
+            <button class="geraet-button aktiv" onclick="wechsleGeraet('phone')">
+                📱 Smartphone
+            </button>
+            <button class="geraet-button" onclick="wechsleGeraet('tablet')">
+                📱 Tablet
+            </button>
+            <button class="geraet-button" onclick="wechsleGeraet('desktop')">
+                💻 Desktop
+            </button>
+        </div>
+
+        <!-- Level 1: Viewport verstehen -->
+        <div class="lern-panel">
+            <h2>📏 Level 1: Der Viewport</h2>
+            <p>Der Viewport ist der sichtbare Bereich einer Webseite. Jedes Gerät hat einen anderen!</p>
+
+            <div class="code-beispiel">
+&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+            </div>
+
+            <button onclick="zeigeHilfe('viewport-hilfe')" style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer;">
+                💡 Was bedeutet das?
+            </button>
+
+            <div class="hilfe-box" id="viewport-hilfe">
+                <strong>Viewport Meta-Tag erklärt:</strong>
+                <ul>
+                    <li><code>width=device-width</code> - Breite = Gerätebreite</li>
+                    <li><code>initial-scale=1.0</code> - Kein Zoom beim Laden</li>
+                </ul>
+                <p>Ohne dieses Tag sehen Mobile-Seiten winzig aus!</p>
+            </div>
+        </div>
+
+        <!-- Device Frame -->
+        <div class="device-frame phone" id="device">
+            <div class="device-screen">
+                <div class="meine-website">
+                    <!-- Navigation -->
+                    <nav class="navigation">
+                        <ul class="nav-liste">
+                            <li>Home</li>
+                            <li>Produkte</li>
+                            <li>Über uns</li>
+                            <li>Kontakt</li>
+                        </ul>
+                    </nav>
+
+                    <!-- Hero Bereich -->
+                    <div class="hero-bereich">
+                        <h1 class="hero-titel">Willkommen auf meiner Website!</h1>
+                        <p>Diese Seite soll auf allen Geräten gut aussehen.</p>
+                    </div>
+
+                    <!-- Produkt Grid -->
+                    <div class="produkt-grid">
+                        <div class="produkt-karte">
+                            <h3>Produkt 1</h3>
+                            <p>Beschreibung</p>
+                        </div>
+                        <div class="produkt-karte">
+                            <h3>Produkt 2</h3>
+                            <p>Beschreibung</p>
+                        </div>
+                        <div class="produkt-karte">
+                            <h3>Produkt 3</h3>
+                            <p>Beschreibung</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level 2: Media Queries -->
+        <div class="lern-panel">
+            <h2>🎯 Level 2: Media Queries - Die Responsive-Magie</h2>
+            <p>Mit Media Queries kannst du CSS für verschiedene Bildschirmgrößen anpassen!</p>
+
+            <div class="code-beispiel">
+/* Mobile First Approach */<br>
+.element {<br>
+&nbsp;&nbsp;font-size: 16px; /* Mobile */<br>
+}<br><br>
+@media (min-width: 768px) {<br>
+&nbsp;&nbsp;.element {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;font-size: 20px; /* Tablet+ */<br>
+&nbsp;&nbsp;}<br>
+}
+            </div>
+
+            <h3>🎯 Aufgabe:</h3>
+            <p>1. Mache die Navigation responsive (horizontal auf Desktop, vertikal auf Mobile)</p>
+            <p>2. Passe die Hero-Titel-Größe an (kleiner auf Mobile)</p>
+            <p>3. Ändere das Grid (1 Spalte Mobile, 2 Tablet, 3 Desktop)</p>
+        </div>
+
+        <!-- Level 3: Flexible Units -->
+        <div class="lern-panel">
+            <h2>📐 Level 3: Flexible Einheiten</h2>
+            <p>Verwende flexible Einheiten statt feste Pixel!</p>
+
+            <div class="werkzeugkasten">
+                <div class="werkzeug" onclick="erklaereEinheit('rem')">
+                    <h3>rem</h3>
+                    <p>Relativ zur Root-Schriftgröße</p>
+                    <code>font-size: 1.5rem;</code>
+                </div>
+                <div class="werkzeug" onclick="erklaereEinheit('em')">
+                    <h3>em</h3>
+                    <p>Relativ zur Eltern-Schriftgröße</p>
+                    <code>padding: 1em;</code>
+                </div>
+                <div class="werkzeug" onclick="erklaereEinheit('vw')">
+                    <h3>vw / vh</h3>
+                    <p>Viewport Width/Height</p>
+                    <code>width: 80vw;</code>
+                </div>
+                <div class="werkzeug" onclick="erklaereEinheit('prozent')">
+                    <h3>%</h3>
+                    <p>Prozent vom Elternelement</p>
+                    <code>width: 100%;</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bonus: Touch-Optimierung -->
+        <div class="lern-panel" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+            <h2>🎯 Bonus: Touch-Optimierung</h2>
+            <p>Mobile Nutzer tippen mit Fingern - mache Buttons groß genug!</p>
+
+            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                <strong>Touch-Target Regeln:</strong>
+                <ul>
+                    <li>Mindestens 44x44px (iOS) oder 48x48px (Android)</li>
+                    <li>Genug Abstand zwischen klickbaren Elementen</li>
+                    <li>Hover-States für Desktop, Focus-States für alle</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="erfolg-nachricht" id="erfolg">
+            🎉 Großartig! Deine Website ist jetzt responsive!
+        </div>
+
+        <div class="viewport-info">
+            Viewport: <span id="viewport-breite">375</span>px
+        </div>
+    </div>
+
+    <script>
+        let aktuellesGeraet = 'phone';
+
+        function wechsleGeraet(geraet) {
+            // Update Buttons
+            document.querySelectorAll('.geraet-button').forEach(btn => {
+                btn.classList.remove('aktiv');
+            });
+            event.target.classList.add('aktiv');
+
+            // Update Device Frame
+            const frame = document.getElementById('device');
+            frame.className = 'device-frame ' + geraet;
+
+            // Update Viewport Info
+            const breiten = {
+                'phone': 375,
+                'tablet': 768,
+                'desktop': 1200
+            };
+            document.getElementById('viewport-breite').textContent = breiten[geraet];
+
+            aktuellesGeraet = geraet;
+        }
+
+        function zeigeHilfe(id) {
+            const hilfe = document.getElementById(id);
+            hilfe.style.display = hilfe.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function erklaereEinheit(einheit) {
+            const erklaerungen = {
+                'rem': 'REM (Root EM):\n\n1rem = Schriftgröße des HTML-Elements (meist 16px)\n\nVorteil: Konsistent über die ganze Seite\n\nBeispiel:\nhtml { font-size: 16px; }\nh1 { font-size: 2rem; } /* 32px */',
+                'em': 'EM:\n\n1em = Schriftgröße des Elternelements\n\nVorsicht: Kann sich verschachteln!\n\nBeispiel:\n.parent { font-size: 20px; }\n.child { font-size: 1.5em; } /* 30px */',
+                'vw': 'Viewport Units:\n\nvw = Viewport Width (Breite)\nvh = Viewport Height (Höhe)\n\n1vw = 1% der Viewport-Breite\n\nBeispiel:\n.hero { height: 100vh; } /* Volle Höhe */\n.container { width: 90vw; } /* 90% Breite */',
+                'prozent': 'Prozent (%):\n\nRelativ zum Elternelement\n\nBeispiel:\n.container { width: 1200px; }\n.half { width: 50%; } /* 600px */'
+            };
+
+            alert('📏 ' + einheit.toUpperCase() + '\n\n' + erklaerungen[einheit]);
+        }
+
+        // Prüfe Responsive-Änderungen
+        function pruefeResponsive() {
+            // Hier würde die Prüfung der CSS-Änderungen stattfinden
+            // Für Demo-Zwecke zeigen wir nach einiger Zeit Erfolg
+            setTimeout(() => {
+                document.getElementById('erfolg').style.display = 'block';
+            }, 5000);
+        }
+
+        // Live Viewport-Breite anzeigen
+        function aktualisiereViewport() {
+            if (window.innerWidth) {
+                document.getElementById('viewport-breite').textContent = window.innerWidth;
+            }
+        }
+
+        window.addEventListener('resize', aktualisiereViewport);
+
+        // Easter Egg: Schüttle das Gerät
+        let shakeCount = 0;
+        document.getElementById('device').addEventListener('click', () => {
+            shakeCount++;
+            if (shakeCount === 5) {
+                document.getElementById('device').style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    document.getElementById('device').style.animation = '';
+                    alert('🎉 Geheimes Schüttel-Feature entdeckt!');
+                }, 500);
+                shakeCount = 0;
+            }
+        });
+
+        // CSS für Shake-Animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>$$, '', '', 'gamified', true, 7, '{"level": 3, "duration": "35-40 min", "skills": ["Responsive Design", "Media Queries", "Mobile First", "Flexible Units"], "age": "11-15"}')
